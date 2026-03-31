@@ -17,7 +17,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: "Nunito", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
   color: var(--text-light);
 }
@@ -64,10 +64,10 @@ body {
   width: 100%;
   border: 0;
   border-radius: 999px;
-  padding: 15px 20px;
+  padding: 9px 16px;
   color: #fff;
-  font-size: 2rem;
-  font-weight: 900;
+  font-size: 1.1rem;
+  font-weight: 800;
   letter-spacing: 0.2px;
   cursor: pointer;
   background: linear-gradient(90deg, var(--primary-grad-start), var(--primary-grad-end));
