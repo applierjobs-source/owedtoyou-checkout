@@ -1,0 +1,214 @@
+:root {
+  --bg-start: #5b79f4;
+  --bg-end: #5c7ffe;
+  --text-light: #ffffff;
+  --card-bg: #ffffff;
+  --primary-grad-start: #6a84ff;
+  --primary-grad-end: #673ab7;
+  --body-copy: #4e4e5f;
+  --muted: #65657a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Nunito", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
+  color: var(--text-light);
+}
+
+body {
+  min-height: 100vh;
+}
+
+.page {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 56px 20px 72px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 46px;
+}
+
+.hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.hero p {
+  margin: 0 auto;
+  max-width: 720px;
+  font-size: clamp(1rem, 2.1vw, 2rem);
+  font-weight: 700;
+}
+
+.checkout-card {
+  width: min(100%, 700px);
+  margin: 0 auto 42px;
+  background: var(--card-bg);
+  border-radius: 18px;
+  padding: 28px 24px 22px;
+  box-shadow: 0 10px 34px rgba(25, 36, 109, 0.25);
+}
+
+.checkout-button {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 15px 20px;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--primary-grad-start), var(--primary-grad-end));
+  transition: transform 0.1s ease, filter 0.2s ease;
+}
+
+.checkout-button:hover {
+  filter: brightness(1.05);
+}
+
+.checkout-button:active {
+  transform: translateY(1px);
+}
+
+.checkout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.checkout-note {
+  color: var(--body-copy);
+  text-align: center;
+  font-size: 1.3rem;
+  margin: 18px auto 0;
+  max-width: 640px;
+  line-height: 1.35;
+}
+
+.checkout-status {
+  margin: 12px 0 0;
+  min-height: 20px;
+  text-align: center;
+  color: #ae2456;
+  font-weight: 700;
+}
+
+.marketing {
+  width: min(100%, 900px);
+  margin: 0 auto 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.marketing h2 {
+  margin: 0 0 16px;
+  font-size: 1.8rem;
+  text-align: center;
+}
+
+.marketing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.marketing article {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.marketing h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.marketing p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.trust-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0 auto 26px;
+  width: min(100%, 900px);
+}
+
+.trust-strip p {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.legal {
+  width: min(100%, 900px);
+  margin: 0 auto 18px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--muted);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+
+.legal h2 {
+  color: #2f2f47;
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+
+.legal p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.legal p:last-child {
+  margin-bottom: 0;
+}
+
+.footer {
+  text-align: center;
+  color: #e7ebff;
+  margin: 0 0 28px;
+}
+
+.footer a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding-top: 36px;
+  }
+
+  .checkout-card {
+    padding: 18px 14px 16px;
+  }
+}

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claim the Funds That Are Owed to You</title>
+    <meta
+      name="description"
+      content="Let us handle your unclaimed funds paperwork. Complete secure checkout and get your claim started."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>Claim the Funds That Are Owed to You</h1>
+        <p>
+          Let us handle the paperwork. Get your check mailed to your home address
+          within 24 hours.
+        </p>
+      </section>
+
+      <section class="checkout-card" aria-label="checkout">
+        <button id="checkoutButton" class="checkout-button">
+          Pay $12.95 &mdash; secure checkout
+        </button>
+        <p class="checkout-note">
+          One-time processing fee. You&apos;ll complete payment on Stripe&apos;s secure
+          page. Charges appear per your card statement.
+        </p>
+        <p id="checkoutStatus" class="checkout-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="marketing" aria-label="why choose us">
+        <h2>Why Families Trust Us</h2>
+        <div class="marketing-grid">
+          <article>
+            <h3>Fast Turnaround</h3>
+            <p>
+              We file your claim package quickly so you can move from uncertainty
+              to action in minutes, not days.
+            </p>
+          </article>
+          <article>
+            <h3>Paperwork Experts</h3>
+            <p>
+              Our team prepares the required forms and supporting details to reduce
+              rejection risk and rework.
+            </p>
+          </article>
+          <article>
+            <h3>Secure by Design</h3>
+            <p>
+              Payments are handled through Stripe and sensitive information is kept
+              to only what is needed to process your request.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="social proof">
+        <p><strong>10,000+</strong> successful claims initiated</p>
+        <p><strong>A+ support</strong> with real email follow-up</p>
+        <p><strong>No subscription</strong> one-time checkout only</p>
+      </section>
+
+      <section class="legal" id="terms">
+        <h2>Terms and Conditions</h2>
+        <p>
+          By using this service, you authorize us to assist with preparing your
+          unclaimed property claim paperwork based on the information you provide.
+          We do not guarantee a specific recovery amount or approval timeline from
+          state agencies.
+        </p>
+        <p>
+          The $12.95 fee covers document preparation and processing support. This
+          is a one-time charge and not a subscription. Refund requests are reviewed
+          case-by-case within 14 days of purchase.
+        </p>
+      </section>
+
+      <section class="legal" id="privacy">
+        <h2>Privacy Policy</h2>
+        <p>
+          We collect only the information required to prepare your paperwork and
+          provide customer support. Payment data is processed by Stripe and is not
+          stored on our servers.
+        </p>
+        <p>
+          We do not sell your personal information. We may use trusted service
+          providers for hosting and operations, such as GitHub and Railway, under
+          confidentiality and security controls.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="#terms">Terms and Conditions</a>
+      <span>•</span>
+      <a href="#privacy">Privacy Policy</a>
+    </footer>
+
+    <script src="/client.js"></script>
+  </body>
+</html>
