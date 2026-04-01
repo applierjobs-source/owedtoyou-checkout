@@ -29,7 +29,6 @@ Single-page checkout landing page with a Stripe Checkout button, marketing secti
 - `STRIPE_AMOUNT_CENTS` (fallback when no `STRIPE_PRICE_ID`, default: `1295`)
 - `STRIPE_CURRENCY` (fallback currency, default: `usd`)
 - `PUBLIC_BASE_URL` (for local testing: `http://localhost:3000`).
-- `GA_MEASUREMENT_ID` (optional) — your GA4 **Measurement ID** (`G-XXXXXXXXXX`) from Google Analytics → **Admin** → **Data streams** → your web stream.
 
 4. Run the server:
 
@@ -66,16 +65,11 @@ Single-page checkout landing page with a Stripe Checkout button, marketing secti
    - `STRIPE_AMOUNT_CENTS` (optional fallback, e.g. `1295`)
    - `STRIPE_CURRENCY` (optional fallback, e.g. `usd`)
    - `PUBLIC_BASE_URL` (your Railway app URL, e.g. `https://your-app.up.railway.app`)
-   - `GA_MEASUREMENT_ID` (optional, e.g. `G-XXXXXXXXXX` for Google Analytics 4)
 4. Railway will auto-detect Node and run `npm start`.
 
 ### Google Analytics 4
 
-1. In [Google Analytics](https://analytics.google.com/), create a **GA4** property if needed.
-2. **Admin** (gear) → **Data streams** → **Web** → add your site URL (e.g. `https://www.owedtoyou.net`).
-3. Copy the **Measurement ID** (`G-...`).
-4. Set `GA_MEASUREMENT_ID` in Railway (or `.env` locally) and redeploy.
-5. The home page is served by the app so the `gtag.js` snippet is injected when this variable is set. Events: **`begin_checkout`** when redirecting to Stripe, **`purchase`** once per browser session when returning with `?checkout=success` (approximate; for exact revenue use [Stripe → GA linking](https://support.google.com/analytics/answer/12995109) or server-side measurement later).
+The GA4 **gtag.js** snippet is in `public/index.html` (Measurement ID `G-4S7RB3FNTK`). To use a different property, replace that ID in both script URLs/config calls. Custom events in `public/client.js`: **`begin_checkout`** before redirect to Stripe, **`purchase`** once per session on `?checkout=success` (approximate; for exact revenue use [Stripe ↔ GA](https://support.google.com/analytics/answer/12995109) or server-side measurement).
 
 ## Customization points
 
