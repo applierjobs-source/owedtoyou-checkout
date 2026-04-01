@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
@@ -38,8 +39,45 @@ if (!stripePriceId) {
 
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
+const publicDir = path.join(__dirname, "public");
+const indexPath = path.join(publicDir, "index.html");
+let indexTemplateCache = null;
+
+function loadIndexTemplate() {
+  if (!indexTemplateCache) {
+    indexTemplateCache = fs.readFileSync(indexPath, "utf8");
+  }
+  return indexTemplateCache;
+}
+
+function renderIndexHtml() {
+  const template = loadIndexTemplate();
+  const gaId = process.env.GA_MEASUREMENT_ID?.trim();
+  let gaSnippet = "";
+  if (gaId) {
+    if (!/^G-[A-Z0-9]+$/i.test(gaId)) {
+      console.warn("GA_MEASUREMENT_ID should look like G-XXXXXXXXXX (GA4). Analytics snippet omitted.");
+    } else {
+      const id = gaId.replace(/"/g, "");
+      gaSnippet = `    <script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "${id}");
+    </script>`;
+    }
+  }
+  return template.replace("__GA4_SCRIPTS__", gaSnippet);
+}
+
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+
+app.get(["/", "/index.html"], (req, res) => {
+  res.type("html").send(renderIndexHtml());
+});
+
+app.use(express.static(publicDir, { index: false }));
 
 function resolveBaseUrl(req) {
   if (process.env.PUBLIC_BASE_URL) {

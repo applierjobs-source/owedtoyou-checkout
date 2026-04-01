@@ -5,6 +5,21 @@ const params = new URLSearchParams(window.location.search);
 if (params.get("checkout") === "success") {
   checkoutStatus.textContent = "Payment completed. Thank you - we'll begin processing your request.";
   checkoutStatus.style.color = "#0b7c3f";
+  if (typeof gtag === "function" && !sessionStorage.getItem("ga_purchase_sent")) {
+    sessionStorage.setItem("ga_purchase_sent", "1");
+    gtag("event", "purchase", {
+      currency: "USD",
+      value: 12.95,
+      items: [
+        {
+          item_id: "processing_fee",
+          item_name: "Claim processing fee",
+          price: 12.95,
+          quantity: 1
+        }
+      ]
+    });
+  }
 }
 
 if (params.get("checkout") === "cancelled") {
@@ -29,6 +44,21 @@ checkoutButton?.addEventListener("click", async () => {
       const base = data.error || "Unable to start checkout.";
       const msg = data.detail ? `${base} — ${data.detail}` : base;
       throw new Error(msg);
+    }
+
+    if (typeof gtag === "function") {
+      gtag("event", "begin_checkout", {
+        currency: "USD",
+        value: 12.95,
+        items: [
+          {
+            item_id: "processing_fee",
+            item_name: "Claim processing fee",
+            price: 12.95,
+            quantity: 1
+          }
+        ]
+      });
     }
 
     window.location.href = data.url;
