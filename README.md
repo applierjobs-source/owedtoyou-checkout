@@ -47,6 +47,14 @@ Single-page checkout landing page with a Stripe Checkout button, marketing secti
 - If `STRIPE_PRICE_ID` is missing, server uses a fallback one-time amount (`STRIPE_AMOUNT_CENTS`/`STRIPE_CURRENCY`).
 - Success and cancel states redirect back to `/?checkout=success` or `/?checkout=cancelled`.
 
+### If you see “Stripe configuration error” or checkout fails
+
+1. **`STRIPE_PRICE_ID` must be a Price ID** — starts with `price_`, from **Product catalog → your product → Pricing**. Do **not** use a Product ID (`prod_...`) or the dollar amount.
+2. **Test vs live must match** — `sk_test_...` keys only work with prices created in **Test mode** in the Dashboard. `sk_live_...` only with **Live mode** prices. Toggle “Test mode” in Stripe (top right) and copy the price from the same mode as your secret key.
+3. **No stray spaces** — re-paste `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` in Railway (whitespace is trimmed in code, but wrong characters still break).
+4. **Fallback without a Price ID** — remove `STRIPE_PRICE_ID` from Railway and set `STRIPE_AMOUNT_CENTS=1295` and `STRIPE_CURRENCY=usd` so Checkout uses an inline amount (still needs a valid `STRIPE_SECRET_KEY`).
+5. **See Stripe’s exact error** — set `STRIPE_DEBUG=true` in Railway, redeploy, click checkout again; the JSON response may include a `detail` field. Check **Deployments → View logs** for `Failed to create Stripe Checkout session:`.
+
 ## Deploy on GitHub + Railway
 
 1. Push this folder to a GitHub repo.

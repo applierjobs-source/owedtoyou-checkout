@@ -26,7 +26,9 @@ checkoutButton?.addEventListener("click", async () => {
 
     const data = await response.json();
     if (!response.ok || !data.url) {
-      throw new Error(data.error || "Unable to start checkout.");
+      const base = data.error || "Unable to start checkout.";
+      const msg = data.detail ? `${base} — ${data.detail}` : base;
+      throw new Error(msg);
     }
 
     window.location.href = data.url;
