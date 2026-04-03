@@ -7,6 +7,15 @@ const registerShortener = require("./shortener");
 dotenv.config();
 
 const app = express();
+
+// Redirect non-www to www
+app.use((req, res, next) => {
+  if (req.hostname === "owedtoyou.net") {
+    return res.redirect(301, `https://www.owedtoyou.net${req.originalUrl}`);
+  }
+  next();
+});
+
 const port = process.env.PORT || 3000;
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim();
