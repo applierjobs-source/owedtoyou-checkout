@@ -1,10 +1,11 @@
 const path = require("path");
-const fs = require("fs");
 const express = require("express");
 const dotenv = require("dotenv");
+const multer = require("multer");
 const Stripe = require("stripe");
 const registerShortener = require("./shortener");
 const { sendIntakeEmail, sendClaimIdEmail } = require("./fulfillment");
+const { initDb, saveClaim, getClaims } = require("./db");
 
 dotenv.config();
 
@@ -51,6 +52,14 @@ if (!stripePriceId) {
 }
 
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+
+// ---------------------------------------------------------------------------
+// Multer — memory storage, 10MB limit
+// ---------------------------------------------------------------------------
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
 // ---------------------------------------------------------------------------
 // Webhook route — MUST be registered before express.json() so the raw body
@@ -131,38 +140,34 @@ function resolveBaseUrl(req) {
   return host ? `${proto}://${host}` : publicBaseUrl;
 }
 
-function ensureDataDir() {
-  const dataDir = path.join(__dirname, "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  return dataDir;
-}
-
-function loadClaims() {
-  const filePath = path.join(__dirname, "data", "claims.json");
-  if (!fs.existsSync(filePath)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return [];
-  }
-}
-
-function saveClaims(claims) {
-  ensureDataDir();
-  fs.writeFileSync(
-    path.join(__dirname, "data", "claims.json"),
-    JSON.stringify(claims, null, 2),
-    "utf8"
-  );
-}
-
 // Generate a simple claim ID
 function generateClaimId() {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `OTY-${ts}-${rand}`;
+}
+
+function escHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function basicAuthCheck(req, res) {
+  const authHeader = req.headers.authorization || "";
+  const b64 = authHeader.startsWith("Basic ") ? authHeader.slice(6) : "";
+  const decoded = b64 ? Buffer.from(b64, "base64").toString("utf8") : "";
+  const [user, pass] = decoded.split(":").map(s => s || "");
+  const validUser = user === "admin";
+  const validPass = adminPassword ? pass === adminPassword : pass === "admin";
+  if (!validUser || !validPass) {
+    res.set("WWW-Authenticate", 'Basic realm="Admin"');
+    res.status(401).send("Unauthorized");
+    return false;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -244,9 +249,9 @@ app.post("/create-checkout-session", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /submit-claim-info
+// POST /submit-claim-info — multer for multipart/form-data with ID image
 // ---------------------------------------------------------------------------
-app.post("/submit-claim-info", async (req, res) => {
+app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
   try {
     const {
       token,
@@ -267,7 +272,12 @@ app.post("/submit-claim-info", async (req, res) => {
     }
 
     const claimId = generateClaimId();
-    const record = {
+
+    // Pull uploaded file from multer
+    const idImage = req.file ? req.file.buffer : null;
+    const idMime = req.file ? req.file.mimetype : null;
+
+    await saveClaim({
       claimId,
       token: token || "",
       firstName: (firstName || "").trim(),
@@ -280,18 +290,14 @@ app.post("/submit-claim-info", async (req, res) => {
       zip: (zip || "").trim(),
       email: (email || "").trim(),
       phone: (phone || "").trim(),
-      submittedAt: new Date().toISOString(),
-      status: "pending"
-    };
+      idImage,
+      idMime
+    });
 
-    const claims = loadClaims();
-    claims.push(record);
-    saveClaims(claims);
+    console.log(`[submit-claim-info] New claim saved to Postgres: ${claimId} for ${(email || "").trim()}`);
 
-    console.log(`[submit-claim-info] New claim saved: ${claimId} for ${record.email}`);
-
-    // Send claim ID email — placeholder logs for now, fires async
-    sendClaimIdEmail(record.email, claimId, record.firstName).catch(err => {
+    // Send claim ID email — fires async
+    sendClaimIdEmail((email || "").trim(), claimId, (firstName || "").trim()).catch(err => {
       console.error("[submit-claim-info] sendClaimIdEmail error:", err.message);
     });
 
@@ -305,43 +311,36 @@ app.post("/submit-claim-info", async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /admin/claims — simple admin view protected by basic auth
 // ---------------------------------------------------------------------------
-app.get("/admin/claims", (req, res) => {
-  // Basic auth check
-  const authHeader = req.headers.authorization || "";
-  const b64 = authHeader.startsWith("Basic ") ? authHeader.slice(6) : "";
-  const decoded = b64 ? Buffer.from(b64, "base64").toString("utf8") : "";
-  const [user, pass] = decoded.split(":").map(s => s || "");
+app.get("/admin/claims", async (req, res) => {
+  if (!basicAuthCheck(req, res)) return;
 
-  const validUser = user === "admin";
-  const validPass = adminPassword ? pass === adminPassword : pass === "admin";
-
-  if (!validUser || !validPass) {
-    res.set("WWW-Authenticate", 'Basic realm="Admin"');
-    return res.status(401).send("Unauthorized");
+  let claims = [];
+  try {
+    claims = await getClaims();
+  } catch (err) {
+    console.error("[admin/claims] DB error:", err.message);
+    return res.status(500).send("Database error: " + escHtml(err.message));
   }
-
-  const claims = loadClaims();
 
   const rows = claims.length
     ? claims
-        .slice()
-        .reverse()
         .map(c => {
-          const ssnLast4 = (c.ssn || "").replace(/-/g, "").slice(-4).padStart(4, "*");
           const statusColor =
             c.status === "pending"
               ? "#f59e0b"
               : c.status === "complete"
               ? "#10b981"
               : "#64748b";
+          const submitted = c.submitted_at ? new Date(c.submitted_at).toLocaleString() : "";
+          const hasId = c.id_image ? true : false; // id_image not returned by getClaims — check via separate route
           return `<tr>
-            <td>${escHtml(c.claimId || "")}</td>
-            <td>${escHtml(c.firstName + " " + c.lastName)}</td>
-            <td>${escHtml(c.email)}</td>
-            <td>${escHtml(c.phone)}</td>
-            <td>***-**-${ssnLast4}</td>
-            <td style="color:${statusColor};font-weight:600">${escHtml(c.status)}</td>
-            <td>${escHtml(c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "")}</td>
+            <td>${escHtml(c.claim_id || "")}</td>
+            <td>${escHtml((c.first_name || "") + " " + (c.last_name || ""))}</td>
+            <td>${escHtml(c.email || "")}</td>
+            <td>${escHtml(c.phone || "")}</td>
+            <td style="color:${statusColor};font-weight:600">${escHtml(c.status || "")}</td>
+            <td>${escHtml(submitted)}</td>
+            <td><a href="/admin/claims/${escHtml(c.claim_id)}/id-image" style="color:#10b981;text-decoration:none;font-size:12px;background:#052e16;border:1px solid #166534;border-radius:6px;padding:3px 8px">View ID</a></td>
           </tr>`;
         })
         .join("")
@@ -371,7 +370,7 @@ app.get("/admin/claims", (req, res) => {
 </head>
 <body>
 <h1>Claims Admin <span class="count">${claims.length} total</span></h1>
-<p class="sub">OwedToYou.net &mdash; Submitted claims</p>
+<p class="sub">OwedToYou.net &mdash; Submitted claims (Postgres)</p>
 <a href="/admin/claims" class="refresh">↻ Refresh</a>
 <div class="table-wrap">
   <table>
@@ -381,9 +380,9 @@ app.get("/admin/claims", (req, res) => {
         <th>Name</th>
         <th>Email</th>
         <th>Phone</th>
-        <th>SSN (last 4)</th>
         <th>Status</th>
         <th>Submitted</th>
+        <th>ID</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -396,28 +395,39 @@ app.get("/admin/claims", (req, res) => {
   res.send(html);
 });
 
-function escHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+// ---------------------------------------------------------------------------
+// GET /admin/claims/:claimId/id-image — view uploaded ID image
+// ---------------------------------------------------------------------------
+app.get("/admin/claims/:claimId/id-image", async (req, res) => {
+  if (!basicAuthCheck(req, res)) return;
 
-// ---------------------------------------------------------------------------
-// Start
-// ---------------------------------------------------------------------------
-app.listen(port, () => {
-  console.log(`Checkout page running on ${publicBaseUrl}`);
+  const { claimId } = req.params;
+  try {
+    const { pool } = require("./db");
+    const result = await pool.query(
+      "SELECT id_image, id_mime FROM claims WHERE claim_id = $1",
+      [claimId]
+    );
+    if (!result.rows.length || !result.rows[0].id_image) {
+      return res.status(404).send("No ID image found for this claim.");
+    }
+    const { id_image, id_mime } = result.rows[0];
+    res.set("Content-Type", id_mime || "application/octet-stream");
+    res.set("Content-Disposition", `inline; filename="id-${claimId}"`);
+    res.send(id_image);
+  } catch (err) {
+    console.error("[admin/id-image] Error:", err.message);
+    res.status(500).send("Database error: " + escHtml(err.message));
+  }
 });
 
-// Temporary email test endpoint — remove after confirming email works
-app.get('/test-email', async (req, res) => {
-  const { sendClaimIdEmail } = require('./fulfillment');
-  try {
-    await sendClaimIdEmail('zacharrow3@gmail.com', 'OTY-TEST-0001', 'Zach');
-    res.json({ success: true, message: 'Email sent — check inbox' });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message, stack: e.stack });
-  }
+// ---------------------------------------------------------------------------
+// Start — init DB then listen
+// ---------------------------------------------------------------------------
+initDb().catch(err => {
+  console.error("[db] initDb failed:", err.message);
+});
+
+app.listen(port, () => {
+  console.log(`Checkout page running on ${publicBaseUrl}`);
 });

