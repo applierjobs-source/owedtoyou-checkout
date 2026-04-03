@@ -49,6 +49,16 @@ function generateCode() {
 
 module.exports = function registerShortener(app) {
 
+  // Debug endpoint — remove after confirming env vars work
+  app.get('/debug-redis', async (req, res) => {
+    res.json({
+      hasUrl: !!REDIS_URL,
+      hasToken: !!REDIS_TOKEN,
+      urlPrefix: REDIS_URL ? REDIS_URL.substring(0, 30) : null
+    });
+  });
+
+
   // POST /shorten { url: "https://..." } → { short: "https://www.owedtoyou.net/c/a1b2c3" }
   app.post('/shorten', async (req, res) => {
     const { url } = req.body;
