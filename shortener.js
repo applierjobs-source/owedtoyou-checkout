@@ -1,42 +1,58 @@
 // ===================================================
-// URL Shortener v3 — stateless, survives redeploys
-// Encodes only the claim data payload (not the full URL)
-// Server reconstructs full claim URL on redirect
+// URL Shortener v4 — Redis-backed, truly short codes
+// Uses Upstash Redis REST API for persistent storage
+// Codes are 6 random chars e.g. owedtoyou.net/c/a1b2c3
 // ===================================================
 
-const CLAIM_BASE = 'https://www.owedtoyou.net/claim.html';
+const crypto = require('crypto');
+
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function redisSet(key, value) {
+  const res = await fetch(`${REDIS_URL}/set/${key}/${encodeURIComponent(value)}`, {
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+  });
+  return res.ok;
+}
+
+async function redisGet(key) {
+  const res = await fetch(`${REDIS_URL}/get/${key}`, {
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.result || null;
+}
+
+function generateCode() {
+  return crypto.randomBytes(3).toString('hex'); // 6-char e.g. "a1b2c3"
+}
 
 module.exports = function registerShortener(app) {
 
-  // POST /shorten { url: "https://www.owedtoyou.net/claim.html?d=BASE64" }
-  // Extracts the ?d= param and stores only that as the code
-  app.post('/shorten', (req, res) => {
+  // POST /shorten { url: "https://..." } → { short: "https://www.owedtoyou.net/c/a1b2c3" }
+  app.post('/shorten', async (req, res) => {
     const { url } = req.body;
     if (!url) return res.status(400).json({ error: 'url required' });
     try {
-      const d = new URL(url).searchParams.get('d');
-      if (!d) return res.status(400).json({ error: 'no d param' });
-      // Strip padding = signs for cleaner URL
-      const code = d.replace(/=+$/, '');
-      const short = `https://www.owedtoyou.net/c/${code}`;
-      res.json({ code, short });
-    } catch(e) {
-      res.status(400).json({ error: 'invalid url' });
+      const code = generateCode();
+      await redisSet(`link:${code}`, url);
+      res.json({ code, short: `https://www.owedtoyou.net/c/${code}` });
+    } catch (e) {
+      console.error('Shorten error:', e);
+      res.status(500).json({ error: 'Failed to shorten URL' });
     }
   });
 
-  // GET /c/:code → reconstruct full claim URL and redirect
-  app.get('/c/:code', (req, res) => {
+  // GET /c/:code → look up in Redis and redirect
+  app.get('/c/:code', async (req, res) => {
     try {
-      const code = req.params.code;
-      // Validate it decodes to valid JSON
-      const padded = code + '=='.slice(0, (4 - code.length % 4) % 4);
-      const json = Buffer.from(padded, 'base64').toString('utf8');
-      JSON.parse(json); // throws if invalid
-      const fullUrl = `${CLAIM_BASE}?d=${code}`;
-      res.redirect(301, fullUrl);
-    } catch(e) {
-      res.status(404).send('Link not found');
+      const url = await redisGet(`link:${req.params.code}`);
+      if (!url) return res.status(404).send('Link not found');
+      res.redirect(301, url);
+    } catch (e) {
+      res.status(500).send('Error looking up link');
     }
   });
 
