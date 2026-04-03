@@ -4,8 +4,8 @@ const dotenv = require("dotenv");
 const multer = require("multer");
 const Stripe = require("stripe");
 const registerShortener = require("./shortener");
-const { sendIntakeEmail, sendClaimIdEmail } = require("./fulfillment");
-const { initDb, saveClaim, getClaims } = require("./db");
+const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail } = require("./fulfillment");
+const { initDb, saveClaim, getClaims, pool } = require("./db");
 
 dotenv.config();
 
@@ -99,12 +99,20 @@ app.post(
       console.log(`[webhook] checkout.session.completed — sessionId: ${sessionId}, email: ${customerEmail}`);
 
       if (customerEmail) {
-        // sendIntakeEmail fails gracefully — no await crash risk
-        sendIntakeEmail(customerEmail, sessionId, {
+        const claimData = {
           name: metadata.name || "",
           holder: metadata.holder || "",
           amount: metadata.amount || ""
-        }).catch(err => {
+        };
+
+        // Save to pending_payments for reminder tracking
+        pool.query(
+          `INSERT INTO pending_payments (token, email, name, amount, holder) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (token) DO NOTHING`,
+          [sessionId, customerEmail, claimData.name, claimData.amount, claimData.holder]
+        ).catch(err => console.error('[webhook] pending_payments insert error:', err.message));
+
+        // Send intake email
+        sendIntakeEmail(customerEmail, sessionId, claimData).catch(err => {
           console.error("[webhook] sendIntakeEmail error:", err.message);
         });
       } else {
@@ -296,9 +304,12 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 
     console.log(`[submit-claim-info] New claim saved to Postgres: ${claimId} for ${(email || "").trim()}`);
 
-    // Send claim ID email — fires async
-    sendClaimIdEmail((email || "").trim(), claimId, (firstName || "").trim()).catch(err => {
-      console.error("[submit-claim-info] sendClaimIdEmail error:", err.message);
+    // Mark pending payment as completed so reminders stop
+    pool.query('UPDATE pending_payments SET completed=TRUE WHERE token=$1', [token || '']).catch(() => {});
+
+    // Send receipt email confirming we received their info and are filing — fires async
+    sendReceiptEmail((email || "").trim(), claimId, (firstName || "").trim()).catch(err => {
+      console.error("[submit-claim-info] sendReceiptEmail error:", err.message);
     });
 
     return res.json({ success: true, claimId });
@@ -422,11 +433,64 @@ app.get("/admin/claims/:claimId/id-image", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Reminder scheduler — runs every hour, sends reminders for incomplete claims
+// ---------------------------------------------------------------------------
+function startReminderScheduler() {
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const THREE_DAYS = 3 * ONE_DAY;
+
+      // Find sessions where payment was made (has token) but claim info not submitted (no first_name)
+      // We track this in a separate pending_payments table
+      const result = await pool.query(
+        `SELECT * FROM pending_payments WHERE completed=FALSE AND (
+          (reminded_at IS NULL AND created_at < NOW() - INTERVAL '24 hours')
+          OR (reminded_at IS NOT NULL AND reminded_at < NOW() - INTERVAL '48 hours' AND reminder_count < 2)
+        )`
+      ).catch(() => ({ rows: [] })); // Silently fail if table doesn't exist yet
+
+      for (const row of result.rows) {
+        await sendReminderEmail(row.email, row.token, { name: row.name, amount: row.amount, holder: row.holder }, (row.reminder_count || 0) + 1);
+        await pool.query(
+          `UPDATE pending_payments SET reminded_at=NOW(), reminder_count=COALESCE(reminder_count,0)+1 WHERE token=$1`,
+          [row.token]
+        ).catch(() => {});
+        console.log(`[reminder] Sent reminder to ${row.email}`);
+      }
+    } catch (err) {
+      console.error('[reminder] Scheduler error:', err.message);
+    }
+  }, 60 * 60 * 1000); // every hour
+}
+
+// Initialize pending_payments table for tracking incomplete orders
+async function initPendingPayments() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pending_payments (
+      id SERIAL PRIMARY KEY,
+      token TEXT UNIQUE NOT NULL,
+      email TEXT,
+      name TEXT,
+      amount TEXT,
+      holder TEXT,
+      reminder_count INT DEFAULT 0,
+      reminded_at TIMESTAMPTZ,
+      completed BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(err => console.error('[db] initPendingPayments error:', err.message));
+}
+
 // Start — init DB then listen
 // ---------------------------------------------------------------------------
-initDb().catch(err => {
+initDb().then(() => initPendingPayments()).catch(err => {
   console.error("[db] initDb failed:", err.message);
 });
+
+startReminderScheduler();
 
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
