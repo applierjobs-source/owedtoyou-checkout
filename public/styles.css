@@ -1,12 +1,15 @@
 :root {
-  --bg-start: #5b79f4;
-  --bg-end: #5c7ffe;
-  --text-light: #ffffff;
-  --card-bg: #ffffff;
-  --primary-grad-start: #6a84ff;
-  --primary-grad-end: #673ab7;
-  --body-copy: #4e4e5f;
-  --muted: #65657a;
+  --bg: #020817;
+  --surface: #0f172a;
+  --surface-elevated: #1e293b;
+  --border: #1e293b;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --accent: #10b981;
+  --accent-hover: #34d399;
+  --danger: #f87171;
+  --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -17,9 +20,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
-  color: var(--text-light);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
@@ -29,53 +32,73 @@ body {
 .page {
   width: min(100%, 980px);
   margin: 0 auto;
-  padding: 56px 20px 72px;
+  padding: 32px 20px 72px;
+}
+
+.site-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.site-logo__text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.3px;
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 46px;
+  margin-bottom: 40px;
 }
 
 .hero h1 {
-  margin: 0 0 14px;
-  font-size: clamp(2rem, 4vw, 4rem);
-  line-height: 1.1;
-  font-weight: 900;
+  margin: 0 0 16px;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .hero p {
   margin: 0 auto;
-  max-width: 720px;
-  font-size: clamp(1rem, 2.1vw, 2rem);
-  font-weight: 700;
+  max-width: 640px;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .checkout-card {
-  width: min(100%, 700px);
-  margin: 0 auto 42px;
-  background: var(--card-bg);
-  border-radius: 18px;
-  padding: 28px 24px 22px;
-  box-shadow: 0 10px 34px rgba(25, 36, 109, 0.25);
+  width: min(100%, 440px);
+  margin: 0 auto 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  box-shadow: var(--shadow-card);
 }
 
 .checkout-button {
   width: 100%;
   border: 0;
-  border-radius: 999px;
-  padding: 9px 16px;
+  border-radius: 14px;
+  padding: 17px 20px;
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  background: linear-gradient(90deg, var(--primary-grad-start), var(--primary-grad-end));
-  transition: transform 0.1s ease, filter 0.2s ease;
+  background: var(--accent);
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .checkout-button:hover {
-  filter: brightness(1.05);
+  background: var(--accent-hover);
 }
 
 .checkout-button:active {
@@ -84,39 +107,43 @@ body {
 
 .checkout-button:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .checkout-note {
-  color: var(--body-copy);
+  color: var(--text-subtle);
   text-align: center;
-  font-size: 1.3rem;
-  margin: 18px auto 0;
-  max-width: 640px;
-  line-height: 1.35;
+  font-size: 12px;
+  margin: 16px auto 0;
+  max-width: 360px;
+  line-height: 1.6;
 }
 
 .checkout-status {
-  margin: 12px 0 0;
-  min-height: 20px;
+  margin: 14px 0 0;
+  min-height: 22px;
   text-align: center;
-  color: #ae2456;
-  font-weight: 700;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .marketing {
   width: min(100%, 900px);
   margin: 0 auto 20px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   padding: 24px;
-  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-card);
 }
 
 .marketing h2 {
-  margin: 0 0 16px;
-  font-size: 1.8rem;
+  margin: 0 0 18px;
+  font-size: 1.35rem;
+  font-weight: 700;
   text-align: center;
+  color: var(--text);
 }
 
 .marketing-grid {
@@ -126,55 +153,71 @@ body {
 }
 
 .marketing article {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 14px;
+  background: var(--surface-elevated);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(30, 41, 59, 0.8);
 }
 
 .marketing h3 {
   margin: 0 0 8px;
-  font-size: 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-hover);
 }
 
 .marketing p {
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.5;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .trust-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-  margin: 0 auto 26px;
+  gap: 12px;
+  margin: 0 auto 28px;
   width: min(100%, 900px);
 }
 
 .trust-strip p {
   margin: 0;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
   text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.trust-strip strong {
+  color: var(--accent-hover);
+  font-weight: 700;
 }
 
 .legal {
   width: min(100%, 900px);
-  margin: 0 auto 18px;
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--muted);
-  border-radius: 12px;
-  padding: 18px 20px;
+  margin: 0 auto 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 16px;
+  padding: 20px 22px;
 }
 
 .legal h2 {
-  color: #2f2f47;
-  margin: 0 0 8px;
-  font-size: 1.35rem;
+  color: var(--text);
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .legal p {
-  margin: 0 0 10px;
-  line-height: 1.45;
+  margin: 0 0 12px;
+  line-height: 1.55;
+  font-size: 14px;
 }
 
 .legal p:last-child {
@@ -183,32 +226,27 @@ body {
 
 .footer {
   text-align: center;
-  color: #e7ebff;
+  color: var(--text-subtle);
   margin: 0 0 28px;
+  font-size: 13px;
 }
 
 .footer a {
-  color: inherit;
+  color: var(--accent-hover);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .footer a:hover {
   text-decoration: underline;
 }
 
-@media (max-width: 900px) {
-  html {
-    font-size: 14px;
-  }
-}
-
 @media (max-width: 600px) {
   .page {
-    padding-top: 36px;
+    padding-top: 24px;
   }
 
   .checkout-card {
-    padding: 18px 14px 16px;
+    padding: 22px 18px 20px;
   }
 }
