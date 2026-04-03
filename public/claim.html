@@ -72,7 +72,13 @@
       return;
     }
 
-    const {name, address, city, state, holder, amount} = data;
+    // Support both full keys and compressed keys (n/a/c/s/h/v)
+    const name    = data.name    || data.n;
+    const address = data.address || data.a;
+    const city    = data.city    || data.c;
+    const state   = data.state   || data.s;
+    const holder  = data.holder  || data.h;
+    const amount  = data.amount  || data.v;
     const amtFmt = fmt(amount);
 
     app.innerHTML = `
