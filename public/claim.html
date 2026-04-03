@@ -104,8 +104,8 @@
             <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
             <div class="check-item"><span class="check-icon">✓</span><span>Takes about 90 seconds to get started</span></div>
           </div>
-          <button class="cta-btn" onclick="window.location.href='https://www.owedtoyou.net'">Claim My ${amtFmt} →</button>
-          <p class="cta-sub">You'll be taken to owedtoyou.net to complete your claim securely.</p>
+          <button class="cta-btn" id="claim-btn" onclick="startCheckout(this, '${amtFmt}')">Claim My ${amtFmt} →</button>
+          <p class="cta-sub">You'll be taken to a secure Stripe checkout page.</p>
         </div>
       </div>
     `;
@@ -113,6 +113,30 @@
 
   render();
   window.addEventListener('hashchange', render);
+
+  async function startCheckout(btn, amtFmt) {
+    btn.disabled = true;
+    btn.textContent = 'Loading secure checkout...';
+    try {
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Claim My ' + amtFmt + ' →';
+        alert('Something went wrong. Please try again.');
+      }
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Claim My ' + amtFmt + ' →';
+      alert('Something went wrong. Please try again.');
+    }
+  }
 </script>
 </body>
 </html>
