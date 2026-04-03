@@ -55,7 +55,9 @@
 
   function render() {
     const app = document.getElementById('app');
-    const hash = window.location.hash.replace(/^#/, '');
+    // Support both ?d= query param and #hash for backwards compat
+    const params = new URLSearchParams(window.location.search);
+    const hash = params.get('d') || window.location.hash.replace(/^#/, '');
 
     if (!hash) {
       app.innerHTML = '<div class="error-state" style="max-width:440px"><p style="font-size:16px;margin-bottom:8px">This link is no longer valid.</p><a href="https://www.owedtoyou.net">Visit owedtoyou.net to search for your funds</a></div>';
