@@ -40,6 +40,8 @@ if (!stripePriceId) {
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
 app.use(express.json());
+// Shortener routes before static so GET /c/:code is never swallowed by express.static
+registerShortener(app);
 app.use(express.static(path.join(__dirname, "public")));
 
 function resolveBaseUrl(req) {
@@ -114,8 +116,6 @@ app.post("/create-checkout-session", async (req, res) => {
     return res.status(500).json(body);
   }
 });
-
-registerShortener(app);
 
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
