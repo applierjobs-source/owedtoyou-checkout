@@ -410,3 +410,14 @@ function escHtml(str) {
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
 });
+
+// Temporary email test endpoint — remove after confirming email works
+app.get('/test-email', async (req, res) => {
+  const { sendClaimIdEmail } = require('./fulfillment');
+  try {
+    await sendClaimIdEmail('zacharrow3@gmail.com', 'OTY-TEST-0001', 'Zach');
+    res.json({ success: true, message: 'Email sent — check inbox' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message, stack: e.stack });
+  }
+});
