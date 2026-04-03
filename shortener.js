@@ -5,24 +5,42 @@
 // ===================================================
 
 const crypto = require('crypto');
+const https  = require('https');
 
 const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-async function redisSet(key, value) {
-  const res = await fetch(`${REDIS_URL}/set/${key}/${encodeURIComponent(value)}`, {
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+function redisRequest(path) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(path, REDIS_URL);
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+    };
+    const req = https.request(options, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); }
+        catch(e) { resolve(null); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
   });
-  return res.ok;
+}
+
+async function redisSet(key, value) {
+  const encoded = encodeURIComponent(value);
+  const data = await redisRequest(`/set/${encodeURIComponent(key)}/${encoded}`);
+  return data && data.result === 'OK';
 }
 
 async function redisGet(key) {
-  const res = await fetch(`${REDIS_URL}/get/${key}`, {
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.result || null;
+  const data = await redisRequest(`/get/${encodeURIComponent(key)}`);
+  return data ? data.result : null;
 }
 
 function generateCode() {
