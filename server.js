@@ -2,6 +2,7 @@ const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const Stripe = require("stripe");
+const registerShortener = require("./shortener");
 
 dotenv.config();
 
@@ -113,6 +114,8 @@ app.post("/create-checkout-session", async (req, res) => {
     return res.status(500).json(body);
   }
 });
+
+registerShortener(app);
 
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
