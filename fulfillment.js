@@ -1,32 +1,55 @@
 'use strict';
 
-const nodemailer = require('nodemailer');
+const https = require('https');
+
+const SENDGRID_API_KEY = () => process.env.EMAIL_PASS;
+const FROM = () => process.env.EMAIL_FROM || 'contact@owedtoyou.net';
 
 /**
- * Create a nodemailer transporter from environment variables.
- * Returns null and logs a warning if required env vars are missing.
+ * Send email via SendGrid HTTP API — more reliable than SMTP on cloud servers.
  */
-function createTransporter() {
-  const host = process.env.EMAIL_HOST;
-  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-
-  if (!host || !user || !pass) {
-    console.warn('[fulfillment] Email not configured — missing EMAIL_HOST, EMAIL_USER, or EMAIL_PASS');
-    return null;
+async function sendEmail(to, subject, htmlBody) {
+  const apiKey = SENDGRID_API_KEY();
+  if (!apiKey) {
+    console.warn('[fulfillment] No EMAIL_PASS (SendGrid API key) configured');
+    return;
   }
 
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false }
+  const payload = JSON.stringify({
+    personalizations: [{ to: [{ email: to }] }],
+    from: { email: FROM(), name: 'OwedToYou.net' },
+    subject,
+    content: [{ type: 'text/html', value: htmlBody }]
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.sendgrid.com',
+      path: '/v3/mail/send',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[fulfillment] Email sent to ${to} (${res.statusCode})`);
+          resolve();
+        } else {
+          console.error(`[fulfillment] SendGrid error ${res.statusCode}: ${body}`);
+          reject(new Error(`SendGrid ${res.statusCode}: ${body}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
   });
 }
-
-const FROM = () => process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@owedtoyou.net';
 
 // ---------------------------------------------------------------------------
 // Shared email chrome
@@ -92,8 +115,8 @@ function emailWrapper(bodyHtml) {
  * @param {object} claimData     - { name, holder, amount } from Stripe metadata
  */
 async function sendIntakeEmail(customerEmail, token, claimData = {}) {
-  const transporter = createTransporter();
-  if (!transporter) return;
+  
+  
 
   const intakeUrl = `https://www.owedtoyou.net/claim-info.html?token=${encodeURIComponent(token)}`;
   const name = claimData.name || 'Valued Customer';
@@ -123,27 +146,8 @@ async function sendIntakeEmail(customerEmail, token, claimData = {}) {
     </div>
   `;
 
-  const mailOptions = {
-    from: `"OwedToYou.net" <${FROM()}>`,
-    to: customerEmail,
-    subject: 'Action Required: Complete your OwedToYou.net claim',
-    html: emailWrapper(bodyHtml),
-    text: [
-      `Hi ${name},`,
-      '',
-      `Your payment was received. To file your claim for ${amount} held by ${holder}, please complete your claim information here:`,
-      '',
-      intakeUrl,
-      '',
-      'It takes about 2 minutes. Your information is encrypted and secure.',
-      '',
-      '— OwedToYou.net'
-    ].join('\n')
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[fulfillment] Intake email sent to ${customerEmail} (messageId: ${info.messageId})`);
+    await sendEmail(customerEmail, 'Action Required: Complete your OwedToYou.net claim', emailWrapper(bodyHtml));
   } catch (err) {
     console.error(`[fulfillment] Failed to send intake email to ${customerEmail}:`, err.message);
   }
@@ -161,8 +165,8 @@ async function sendIntakeEmail(customerEmail, token, claimData = {}) {
  * @param {string} firstName
  */
 async function sendClaimIdEmail(customerEmail, claimId, firstName) {
-  const transporter = createTransporter();
-  if (!transporter) return;
+  
+  
 
   const uploadUrl = 'https://claimit.ca.gov/app/claim-doc-upload';
 
@@ -203,30 +207,9 @@ async function sendClaimIdEmail(customerEmail, claimId, firstName) {
     </div>
   `;
 
-  const mailOptions = {
-    from: `"OwedToYou.net" <${FROM()}>`,
-    to: customerEmail,
-    subject: 'Your claim has been filed — next step inside',
-    html: emailWrapper(bodyHtml),
-    text: [
-      `Hi ${firstName || 'there'},`,
-      '',
-      `Your claim has been filed. Your Claim ID is: ${claimId}`,
-      '',
-      'Next step: Upload your driver\'s license or state ID at:',
-      uploadUrl,
-      '',
-      `Log in with your email and Claim ID: ${claimId}`,
-      '',
-      'Funds are typically sent within 6–8 weeks of ID verification.',
-      '',
-      '— OwedToYou.net'
-    ].join('\n')
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[fulfillment] Claim ID email sent to ${customerEmail} (claimId: ${claimId}, messageId: ${info.messageId})`);
+    await sendEmail(customerEmail, 'Your claim has been filed — next step inside', emailWrapper(bodyHtml));
+    console.log(`[fulfillment] Claim ID email sent to ${customerEmail} (claimId: ${claimId})`);
   } catch (err) {
     console.error(`[fulfillment] Failed to send claim ID email to ${customerEmail}:`, err.message);
   }
