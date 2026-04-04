@@ -130,7 +130,7 @@ app.post(
 app.use(express.json());
 
 // Shortener routes before static so GET /c/:code is never swallowed by express.static
-registerShortener(app);
+registerShortener(app, pool);
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------------------------------------------------------------------------
@@ -490,7 +490,56 @@ initDb().then(() => initPendingPayments()).catch(err => {
   console.error("[db] initDb failed:", err.message);
 });
 
+// ---------------------------------------------------------------------------
+// Follow-up SMS scheduler — texts people who clicked but didn't buy after 24h
+// ---------------------------------------------------------------------------
+function startFollowUpScheduler() {
+  const twilioClient = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+  const TWILIO_FROM = process.env.TWILIO_FROM;
+
+  setInterval(async () => {
+    if (!TWILIO_FROM) return;
+    try {
+      // Find clicks 24-48h ago, not converted, follow-up not sent yet
+      const result = await pool.query(`
+        SELECT * FROM click_log
+        WHERE converted = FALSE
+          AND follow_up_sent = FALSE
+          AND phone IS NOT NULL
+          AND clicked_at < NOW() - INTERVAL '24 hours'
+          AND clicked_at > NOW() - INTERVAL '48 hours'
+      `).catch(() => ({ rows: [] }));
+
+      for (const row of result.rows) {
+        try {
+          const amt = row.amount ? `$${parseFloat(row.amount).toLocaleString('en-US', {minimumFractionDigits:2})}` : 'your funds';
+          const holder = row.holder || 'the state';
+          const location = (row.city && row.state) ? `${row.city}, ${row.state}` : 'your area';
+          const name = row.name || 'there';
+
+          const msg = `${name} - reminder that ${holder} still owes you ${amt} in ${location}. Claim it for $29.99 (full refund if nothing recovered): https://www.owedtoyou.net/c/${row.code}\n\nReply STOP to opt out.`;
+
+          await twilioClient.messages.create({
+            body: msg,
+            from: TWILIO_FROM,
+            to: row.phone
+          });
+
+          await pool.query('UPDATE click_log SET follow_up_sent=TRUE WHERE id=$1', [row.id]);
+          console.log(`[follow-up] Sent to ${row.phone} (${row.name})`);
+        } catch(e) {
+          console.error(`[follow-up] Failed for ${row.phone}:`, e.message);
+        }
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch(err) {
+      console.error('[follow-up] Scheduler error:', err.message);
+    }
+  }, 60 * 60 * 1000); // check every hour
+}
+
 startReminderScheduler();
+startFollowUpScheduler();
 
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
