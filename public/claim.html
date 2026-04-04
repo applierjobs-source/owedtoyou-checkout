@@ -33,6 +33,14 @@
     .error-state{text-align:center;color:#64748b}
     .error-state a{color:#34d399;text-decoration:underline}
   </style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4S7RB3FNTK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-4S7RB3FNTK');
+</script>
 </head>
 <body>
 
@@ -123,6 +131,8 @@
   async function startCheckout(btn, amtFmt) {
     btn.disabled = true;
     btn.textContent = 'Loading secure checkout...';
+    // Track claim button click in GA4
+    gtag('event', 'begin_checkout', { currency: 'USD', value: 29.99 });
     try {
       const res = await fetch('/create-checkout-session', {
         method: 'POST',
