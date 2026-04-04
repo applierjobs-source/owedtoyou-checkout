@@ -518,7 +518,7 @@ function startFollowUpScheduler() {
           const location = (row.city && row.state) ? `${row.city}, ${row.state}` : 'your area';
           const name = row.name || 'there';
 
-          const msg = `${name} - reminder that ${holder} still owes you ${amt} in ${location}. Claim it for $29.99 (full refund if nothing recovered): https://www.owedtoyou.net/c/${row.code}\n\nReply STOP to opt out.`;
+          const msg = `${name} - reminder that ${holder} still owes you ${amt} in ${location}. Claim it for $29.99 (full refund if nothing recovered): https://www.owedtoyou.net/c/${row.code}`;
 
           await twilioClient.messages.create({
             body: msg,
