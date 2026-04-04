@@ -7,6 +7,7 @@ const Twilio = require("twilio");
 const registerShortener = require("./shortener");
 const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail } = require("./fulfillment");
 const { initDb, saveClaim, getClaims, pool } = require("./db");
+const registerSmsReply = require("./ai-agent");
 
 dotenv.config();
 
@@ -132,6 +133,7 @@ app.use(express.json());
 
 // Shortener routes before static so GET /c/:code is never swallowed by express.static
 registerShortener(app, pool);
+registerSmsReply(app, pool, Twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH), process.env.TWILIO_FROM);
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------------------------------------------------------------------------
