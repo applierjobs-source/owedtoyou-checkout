@@ -3,6 +3,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const multer = require("multer");
 const Stripe = require("stripe");
+const Twilio = require("twilio");
 const registerShortener = require("./shortener");
 const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail } = require("./fulfillment");
 const { initDb, saveClaim, getClaims, pool } = require("./db");
@@ -494,7 +495,7 @@ initDb().then(() => initPendingPayments()).catch(err => {
 // Follow-up SMS scheduler — texts people who clicked but didn't buy after 24h
 // ---------------------------------------------------------------------------
 function startFollowUpScheduler() {
-  const twilioClient = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+  const twilioClient = Twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
   const TWILIO_FROM = process.env.TWILIO_FROM;
 
   setInterval(async () => {
