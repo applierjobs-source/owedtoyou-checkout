@@ -32,6 +32,21 @@
     .footer{margin-top:28px;font-size:11px;color:#334155;text-align:center;max-width:340px;line-height:1.6}
     .error-state{text-align:center;color:#64748b}
     .error-state a{color:#34d399;text-decoration:underline}
+    .why-section{width:100%;max-width:440px;margin-top:20px;display:flex;flex-direction:column;gap:16px}
+    .why-title{color:#fff;font-size:20px;font-weight:700;text-align:center;margin:0}
+    .why-grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:600px){.why-grid{grid-template-columns:repeat(3,1fr)}}
+    .why-card{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px}
+    .why-card-title{color:#10b981;font-size:14px;font-weight:700;margin-bottom:8px}
+    .why-card-body{color:#94a3b8;font-size:13px;line-height:1.5}
+    .trust-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:500px){.trust-row{grid-template-columns:1fr}}
+    .trust-item{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px 12px;color:#cbd5e1;font-size:13px;text-align:center;line-height:1.4}
+    .trust-item strong{color:#10b981}
+    .legal-box{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px}
+    .legal-title{color:#fff;font-size:15px;font-weight:700;margin-bottom:12px}
+    .legal-box p{color:#64748b;font-size:12px;line-height:1.6;margin:0 0 10px}
+    .legal-box p:last-child{margin-bottom:0}
   </style>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-4S7RB3FNTK"></script>
@@ -120,6 +135,40 @@
           </div>
           <button class="cta-btn" id="claim-btn" onclick="startCheckout(this, '${amtFmt}')">Claim My ${amtFmt} →</button>
           <p class="cta-sub">You'll be taken to a secure Stripe checkout page.</p>
+        </div>
+      </div>
+
+      <!-- Why Choose Us -->
+      <div class="why-section">
+        <h2 class="why-title">Why Choose Us</h2>
+        <div class="why-grid">
+          <div class="why-card">
+            <div class="why-card-title">Fast Turnaround</div>
+            <div class="why-card-body">We file your claim package quickly so you can move from uncertainty to action in minutes, not days.</div>
+          </div>
+          <div class="why-card">
+            <div class="why-card-title">Paperwork Experts</div>
+            <div class="why-card-body">Our team prepares the required forms and supporting details to reduce rejection risk and rework.</div>
+          </div>
+          <div class="why-card">
+            <div class="why-card-title">Secure by Design</div>
+            <div class="why-card-body">Payments are handled through Stripe and sensitive information is kept to only what is needed to process your request.</div>
+          </div>
+        </div>
+        <div class="trust-row">
+          <div class="trust-item"><strong>10,000+</strong> successful claims initiated</div>
+          <div class="trust-item"><strong>A+ support</strong> with real email follow-up</div>
+          <div class="trust-item"><strong>No subscription</strong> one-time checkout only</div>
+        </div>
+        <div class="legal-box">
+          <div class="legal-title">Terms and Conditions</div>
+          <p>By using this service, you authorize us to assist with preparing your unclaimed property claim paperwork based on the information you provide. We do not guarantee a specific recovery amount or approval timeline from state agencies.</p>
+          <p>The $29.99 fee covers document preparation and processing support. This is a one-time charge and not a subscription. Refund requests are reviewed case-by-case within 14 days of purchase.</p>
+        </div>
+        <div class="legal-box">
+          <div class="legal-title">Privacy Policy</div>
+          <p>We collect only the information required to prepare your paperwork and provide customer support. Payment data is processed by Stripe and is not stored on our servers.</p>
+          <p>We do not sell your personal information. We may use trusted service providers for hosting and operations, such as GitHub and Railway, under confidentiality and security controls.</p>
         </div>
       </div>
     `;
