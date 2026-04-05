@@ -147,7 +147,13 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
     const from = req.body?.phone || req.body?.from || req.body?.From;
     const inboundMsg = (req.body?.message || req.body?.text || req.body?.Body || '').trim();
 
-    if (!from || !inboundMsg) return;
+    // Log the full raw body so we can see exactly what VoidFix sends
+    console.log('[ai-agent] Raw webhook body:', JSON.stringify(req.body));
+
+    if (!from || !inboundMsg) {
+      console.log('[ai-agent] Missing from or message — from:', from, 'msg:', inboundMsg);
+      return;
+    }
 
     console.log(`[ai-agent] Inbound from ${from}: "${inboundMsg}"`);
 
