@@ -163,7 +163,7 @@ async function sendReminderEmail(customerEmail, token, claimData = {}, reminderN
       <p>We still need your information to file your unclaimed property claim. ${urgency}</p>
       <a href="${intakeUrl}" class="cta-btn">Complete My Claim Info →</a>
       <hr class="divider"/>
-      <p style="font-size:13px;color:#475569">Your $29.99 payment is secured. We just need your details to proceed.</p>
+      <p style="font-size:13px;color:#475569">Your $12.95 payment is secured. We just need your details to proceed.</p>
     </div>
   `;
 

@@ -141,7 +141,7 @@
           <hr class="divider"/>
           <div class="checklist">
             <div class="check-item"><span class="check-icon">✓</span><span>We file all the paperwork on your behalf</span></div>
-            <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$29.99</strong> — no hidden costs</span></div>
+            <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
             <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
             <div class="check-item"><span class="check-icon">✓</span><span>Takes about 90 seconds to get started</span></div>
           </div>
@@ -175,7 +175,7 @@
         <div class="legal-box">
           <div class="legal-title">Terms and Conditions</div>
           <p>By using this service, you authorize us to assist with preparing your unclaimed property claim paperwork based on the information you provide. We do not guarantee a specific recovery amount or approval timeline from state agencies.</p>
-          <p>The $29.99 fee covers document preparation and processing support. This is a one-time charge and not a subscription. Refund requests are reviewed case-by-case within 14 days of purchase.</p>
+          <p>The $12.95 fee covers document preparation and processing support. This is a one-time charge and not a subscription. Refund requests are reviewed case-by-case within 14 days of purchase.</p>
         </div>
         <div class="legal-box">
           <div class="legal-title">Privacy Policy</div>
@@ -193,7 +193,7 @@
     btn.disabled = true;
     btn.textContent = 'Loading secure checkout...';
     // Track claim button click in GA4
-    gtag('event', 'begin_checkout', { currency: 'USD', value: 29.99 });
+    gtag('event', 'begin_checkout', { currency: 'USD', value: 12.95 });
     try {
       const res = await fetch('/create-checkout-session', {
         method: 'POST',
