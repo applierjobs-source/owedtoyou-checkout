@@ -133,7 +133,7 @@ app.use(express.json());
 
 // Shortener routes before static so GET /c/:code is never swallowed by express.static
 registerShortener(app, pool);
-registerSmsReply(app, pool, Twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH), process.env.TWILIO_FROM);
+registerSmsReply(app, pool);
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------------------------------------------------------------------------

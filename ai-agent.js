@@ -106,7 +106,7 @@ async function sendVoidFixReply(to, message) {
   });
 }
 
-module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) {
+module.exports = function registerSmsReply(app, pool) {
 
   // Initialize conversation tables
   if (pool) {
@@ -138,25 +138,36 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
     `).catch(err => console.error('[ai-agent] messages table error:', err.message));
   }
 
-  // POST /sms-reply — Inbound SMS webhook (supports both Twilio and VoidFix formats)
-  app.post('/sms-reply', async (req, res) => {
+  // POST /sms-reply — VoidFix inbound webhook
+  // VoidFix sends: POST with form field "messages" (JSON string) + HTTP_X_SG_SIGNATURE header
+  app.post('/sms-reply', require('express').urlencoded({ extended: true }), async (req, res) => {
     res.sendStatus(200);
 
-    // VoidFix format: { phone, message } or { from, text }
-    // Twilio format: { From, Body }
-    const from = req.body?.phone || req.body?.from || req.body?.From;
-    const inboundMsg = (req.body?.message || req.body?.text || req.body?.Body || '').trim();
+    console.log('[ai-agent] Raw body keys:', Object.keys(req.body || {}));
 
-    // Log the full raw body so we can see exactly what VoidFix sends
-    console.log('[ai-agent] Raw webhook body:', JSON.stringify(req.body));
+    let inboundMessages = [];
 
-    if (!from || !inboundMsg) {
-      console.log('[ai-agent] Missing from or message — from:', from, 'msg:', inboundMsg);
-      return;
+    // VoidFix format: form POST with messages JSON field
+    if (req.body?.messages) {
+      try {
+        const parsed = JSON.parse(req.body.messages);
+        inboundMessages = Array.isArray(parsed) ? parsed : [parsed];
+      } catch(e) {
+        console.error('[ai-agent] Failed to parse VoidFix messages:', e.message);
+      }
     }
 
-    console.log(`[ai-agent] Inbound from ${from}: "${inboundMsg}"`);
+    // Process each inbound message
+    for (const msg of inboundMessages) {
+      const from = msg.number;
+      const inboundMsg = (msg.message || '').trim();
+      if (!from || !inboundMsg) continue;
+      console.log(`[ai-agent] Inbound from ${from}: "${inboundMsg}"`);
+      await handleInboundMessage(from, inboundMsg);
+    }
+  });
 
+  async function handleInboundMessage(from, inboundMsg) {
     try {
       // Load conversation context
       const convResult = await pool.query(
@@ -237,7 +248,7 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
     } catch(err) {
       console.error('[ai-agent] Error handling reply:', err.message);
     }
-  });
+  }
 
   // GET /test-agent — verify OpenAI key and VoidFix are working
   app.get('/test-agent', async (req, res) => {
