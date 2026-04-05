@@ -196,6 +196,10 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
       ];
 
       // Get AI reply
+      if (!OPENAI_KEY) {
+        console.error('[ai-agent] OPENAI_API_KEY not set in environment');
+        return;
+      }
       const aiReply = await callOpenAI(messages);
       if (!aiReply) {
         console.error('[ai-agent] No reply from OpenAI');
@@ -227,6 +231,24 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
     } catch(err) {
       console.error('[ai-agent] Error handling reply:', err.message);
     }
+  });
+
+  // GET /test-agent — verify OpenAI key and VoidFix are working
+  app.get('/test-agent', async (req, res) => {
+    const hasKey = !!OPENAI_KEY;
+    let aiOk = false;
+    let aiReply = '';
+    let voidfixOk = false;
+    try {
+      const reply = await callOpenAI([{role:'system',content:'You are Sarah from OwedToYou.net.'},{role:'user',content:'Say hi in one sentence.'}]);
+      aiOk = !!reply;
+      aiReply = reply || 'no reply';
+    } catch(e) { aiReply = e.message; }
+    try {
+      const r = await sendVoidFixReply(req.query.phone || '+15126363628', 'Sarah test: ' + aiReply);
+      voidfixOk = r.success;
+    } catch(e) {}
+    res.json({ hasKey, aiOk, aiReply, voidfixOk });
   });
 
   // Helper to register a new outbound conversation (called from pipeline)
