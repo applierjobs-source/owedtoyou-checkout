@@ -8,6 +8,8 @@
 
 const https = require('https');
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const VOIDFIX_KEY    = process.env.VOIDFIX_KEY    || 'd54e5914ea9e7f06d4d1a0cf7b453f05c21ecb03';
+const VOIDFIX_DEVICE = process.env.VOIDFIX_DEVICE || '1157';
 
 // System prompt for Sarah, OwedToYou.net agent
 function buildSystemPrompt(contactData) {
@@ -78,6 +80,32 @@ async function callOpenAI(messages) {
   });
 }
 
+async function sendVoidFixReply(to, message) {
+  return new Promise((resolve) => {
+    const params = new URLSearchParams({
+      number: to,
+      message: message,
+      key: VOIDFIX_KEY,
+      devices: VOIDFIX_DEVICE
+    });
+    const req = https.request({
+      hostname: 'sms.voidfix.com',
+      path: '/services/send.php',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(params.toString()) }
+    }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); } catch(e) { resolve({ error: body }); }
+      });
+    });
+    req.on('error', e => resolve({ error: e.message }));
+    req.write(params.toString());
+    req.end();
+  });
+}
+
 module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) {
 
   // Initialize conversation tables
@@ -110,14 +138,14 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
     `).catch(err => console.error('[ai-agent] messages table error:', err.message));
   }
 
-  // POST /sms-reply — Twilio webhook for inbound SMS
+  // POST /sms-reply — Inbound SMS webhook (supports both Twilio and VoidFix formats)
   app.post('/sms-reply', async (req, res) => {
-    // Always respond 200 to Twilio immediately
-    res.set('Content-Type', 'text/xml');
-    res.send('<Response></Response>');
+    res.sendStatus(200);
 
-    const from = req.body?.From;
-    const inboundMsg = (req.body?.Body || '').trim();
+    // VoidFix format: { phone, message } or { from, text }
+    // Twilio format: { From, Body }
+    const from = req.body?.phone || req.body?.from || req.body?.From;
+    const inboundMsg = (req.body?.message || req.body?.text || req.body?.Body || '').trim();
 
     if (!from || !inboundMsg) return;
 
@@ -176,12 +204,9 @@ module.exports = function registerSmsReply(app, pool, twilioClient, twilioFrom) 
 
       console.log(`[ai-agent] AI reply to ${from}: "${aiReply}"`);
 
-      // Send reply via Twilio
-      await twilioClient.messages.create({
-        body: aiReply,
-        from: twilioFrom,
-        to: from
-      });
+      // Send reply via VoidFix
+      const sendResult = await sendVoidFixReply(from, aiReply);
+      console.log(`[ai-agent] VoidFix send result:`, JSON.stringify(sendResult).substring(0, 100));
 
       // Save messages to history
       await pool.query(
