@@ -109,7 +109,7 @@
     const holder   = data.holder  || data.h;
     const amount   = data.amount  || data.v;
     const entities = data.e || [{ h: holder, v: amount }];
-    const total    = data.t || amount;
+    const total    = data.t || data.v || amount || 0;
     const amtFmt = fmt(amount);
 
     app.innerHTML = `
@@ -145,7 +145,7 @@
             <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
             <div class="check-item"><span class="check-icon">✓</span><span>Takes about 90 seconds to get started</span></div>
           </div>
-          <button class="cta-btn" id="claim-btn" onclick="startCheckout(this, '${amtFmt}')">Claim My ${amtFmt} →</button>
+          <button class="cta-btn" id="claim-btn" onclick="startCheckout(this, '${fmt(total)}')">Claim My ${fmt(total)} →</button>
           <p class="cta-sub">You'll be taken to a secure Stripe checkout page.</p>
         </div>
       </div>
