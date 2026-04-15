@@ -209,6 +209,80 @@ async function sendClaimConfirmedEmail(customerEmail, claimId, firstName) {
 const sendClaimIdEmail = sendReceiptEmail;
 
 /**
+ * Email: Sends the generated Money Owed PDF report as an attachment
+ */
+async function sendReportEmail(email, firstName, pdfBuffer) {
+  const apiKey = SENDGRID_API_KEY();
+  if (!apiKey) {
+    console.warn('[fulfillment] No EMAIL_PASS (SendGrid API key) configured — skipping report email');
+    return;
+  }
+
+  const pdfBase64 = pdfBuffer.toString('base64');
+
+  const payload = JSON.stringify({
+    personalizations: [{ to: [{ email }] }],
+    from: { email: FROM(), name: 'OwedToYou.net' },
+    subject: `Your Money Owed Report is Ready, ${firstName}`,
+    content: [{
+      type: 'text/html',
+      value: emailWrapper(`
+        <div class="card-header">
+          <p>Report Ready</p>
+          <h1>Your Money Owed report is attached.</h1>
+        </div>
+        <div class="card-body">
+          <p>Hi ${firstName},</p>
+          <p>Your personalized Money Owed report is attached to this email as a PDF. It includes:</p>
+          <div style="margin:16px 0">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="color:#10b981;font-weight:700">✓</span><span>Confirmed unclaimed property in your name</span></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="color:#10b981;font-weight:700">✓</span><span>Matched class action settlements</span></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="color:#10b981;font-weight:700">✓</span><span>Federal unclaimed money sources</span></div>
+          </div>
+          <p>To have us file every claim on your behalf:</p>
+          <a href="https://www.owedtoyou.net/report-ready.html?name=${encodeURIComponent(firstName)}&email=${encodeURIComponent(email)}" class="cta-btn" style="display:block;background:#10b981;color:#fff;text-decoration:none;text-align:center;padding:16px;border-radius:12px;font-size:16px;font-weight:700;margin:20px 0">File All Claims for $95.99 →</a>
+          <p style="font-size:13px;color:#475569">Full refund if we don't recover anything. One-time charge, no subscription.</p>
+        </div>
+      `)
+    }],
+    attachments: [{
+      content: pdfBase64,
+      filename: `Money-Owed-Report-${firstName}.pdf`,
+      type: 'application/pdf',
+      disposition: 'attachment'
+    }]
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.sendgrid.com',
+      path: '/v3/mail/send',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[fulfillment] Report email sent to ${email} (${res.statusCode})`);
+          resolve();
+        } else {
+          console.error(`[fulfillment] SendGrid report email error ${res.statusCode}: ${body}`);
+          reject(new Error(`SendGrid ${res.statusCode}: ${body}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
  * Email: Sent after user submits the free report request form on the homepage
  * Tells them their report is being generated and includes a pay CTA
  */
@@ -224,7 +298,7 @@ async function sendReportRequestEmail(customerEmail, firstName, checkoutUrl) {
     <div class="card-body">
       <p>Hi ${name},</p>
       <p>We're now searching unclaimed property databases across all 50 states, federal agencies, and 100+ active class action settlements for your name and address.</p>
-      <p>Your personalized <strong style="color:#fff">Money Owed report</strong> will be emailed to you within 24 hours.</p>
+      <p>Your personalized <strong style="color:#fff">Money Owed report</strong> will be emailed to you within minutes.</p>
       <hr class="divider"/>
       <p><strong style="color:#fff">Want us to file everything the moment your report is ready?</strong></p>
       <p>Pay our flat fee of <strong style="color:#fff">$95.99</strong> now and we'll file every unclaimed property claim and settlement on your behalf — no extra steps needed. Full refund if we recover nothing.</p>
@@ -241,4 +315,4 @@ async function sendReportRequestEmail(customerEmail, firstName, checkoutUrl) {
   }
 }
 
-module.exports = { sendIntakeEmail, sendReceiptEmail, sendClaimIdEmail, sendReminderEmail, sendClaimConfirmedEmail, sendReportRequestEmail };
+module.exports = { sendIntakeEmail, sendReceiptEmail, sendClaimIdEmail, sendReminderEmail, sendClaimConfirmedEmail, sendReportRequestEmail, sendReportEmail };

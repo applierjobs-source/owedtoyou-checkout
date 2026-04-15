@@ -5,7 +5,7 @@ const multer = require("multer");
 const Stripe = require("stripe");
 const Twilio = require("twilio");
 const registerShortener = require("./shortener");
-const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");
+const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");  // sendReportEmail is required lazily inside /generate-report
 const { initDb, saveClaim, getClaims, pool } = require("./db");
 const registerSmsReply = require("./ai-agent");
 
@@ -328,36 +328,60 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 app.post("/generate-report", async (req, res) => {
   try {
     const { firstName, lastName, city, state, email } = req.body || {};
-
     if (!firstName || !lastName || !city || !state || !email) {
       return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
-    // Save to report_requests table
+    // Save lead to DB (non-blocking)
     pool.query(
-      `INSERT INTO report_requests (first_name, last_name, city, state, email, status)
-       VALUES ($1,$2,$3,$4,$5,'pending')`,
-      [
-        String(firstName).trim().slice(0, 100),
-        String(lastName).trim().slice(0, 100),
-        String(city).trim().slice(0, 100),
-        String(state).trim().slice(0, 10),
-        String(email).trim().slice(0, 200)
-      ]
-    ).catch(err => console.error('[generate-report] DB insert error:', err.message));
+      `INSERT INTO report_requests (first_name, last_name, city, state, email, status) VALUES ($1,$2,$3,$4,$5,'generating')`,
+      [firstName.trim(), lastName.trim(), city.trim(), state.trim(), email.trim()]
+    ).catch(err => console.error('[generate-report] DB error:', err.message));
 
     console.log(`[generate-report] New report request: ${firstName} ${lastName}, ${city}, ${state} <${email}>`);
 
-    // Send confirmation email with pay CTA
-    const baseUrl = resolveBaseUrl(req);
-    const checkoutUrl = `${baseUrl}/report-ready.html?email=${encodeURIComponent(String(email).trim())}&name=${encodeURIComponent(String(firstName).trim())}`;
-    sendReportRequestEmail(
-      String(email).trim(),
-      String(firstName).trim(),
-      checkoutUrl
-    ).catch(err => console.error('[generate-report] sendReportRequestEmail error:', err.message));
+    // Respond immediately so user is redirected to report-ready page
+    res.json({ success: true });
 
-    return res.json({ success: true });
+    // Generate report async (after response sent)
+    setImmediate(async () => {
+      try {
+        const { generateReportHTML, searchUnclaimedProperty, SETTLEMENTS } = require('./report-generator');
+        const { htmlToPdf } = require('./report-pdf');
+        const { sendReportEmail } = require('./fulfillment');
+
+        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Search unclaimed property
+        const unclaimedRecords = await searchUnclaimedProperty(firstName, lastName, state);
+
+        // All settlements apply to general population
+        const matchedSettlements = SETTLEMENTS;
+
+        // Generate HTML
+        const html = generateReportHTML({
+          firstName, lastName, city, state,
+          unclaimedRecords, settlements: matchedSettlements, reportDate
+        });
+
+        // Convert to PDF
+        const pdfBuffer = await htmlToPdf(html);
+
+        // Email PDF
+        await sendReportEmail(email.trim(), firstName.trim(), pdfBuffer);
+
+        // Update DB status
+        pool.query(
+          `UPDATE report_requests SET status='sent' WHERE email=$1 AND first_name=$2`,
+          [email.trim(), firstName.trim()]
+        ).catch(() => {});
+
+        console.log(`[generate-report] Report sent to ${email}`);
+      } catch(err) {
+        console.error('[generate-report] Async generation error:', err.message);
+      }
+    });
+
   } catch (err) {
     console.error('[generate-report] Error:', err.message);
     return res.status(500).json({ success: false, error: 'Internal server error' });
