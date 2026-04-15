@@ -5,7 +5,7 @@ const multer = require("multer");
 const Stripe = require("stripe");
 const Twilio = require("twilio");
 const registerShortener = require("./shortener");
-const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail } = require("./fulfillment");
+const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");
 const { initDb, saveClaim, getClaims, pool } = require("./db");
 const registerSmsReply = require("./ai-agent");
 
@@ -323,6 +323,48 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /generate-report — homepage form submission
+// ---------------------------------------------------------------------------
+app.post("/generate-report", async (req, res) => {
+  try {
+    const { firstName, lastName, city, state, email } = req.body || {};
+
+    if (!firstName || !lastName || !city || !state || !email) {
+      return res.status(400).json({ success: false, error: "Missing required fields" });
+    }
+
+    // Save to report_requests table
+    pool.query(
+      `INSERT INTO report_requests (first_name, last_name, city, state, email, status)
+       VALUES ($1,$2,$3,$4,$5,'pending')`,
+      [
+        String(firstName).trim().slice(0, 100),
+        String(lastName).trim().slice(0, 100),
+        String(city).trim().slice(0, 100),
+        String(state).trim().slice(0, 10),
+        String(email).trim().slice(0, 200)
+      ]
+    ).catch(err => console.error('[generate-report] DB insert error:', err.message));
+
+    console.log(`[generate-report] New report request: ${firstName} ${lastName}, ${city}, ${state} <${email}>`);
+
+    // Send confirmation email with pay CTA
+    const baseUrl = resolveBaseUrl(req);
+    const checkoutUrl = `${baseUrl}/report-ready.html?email=${encodeURIComponent(String(email).trim())}&name=${encodeURIComponent(String(firstName).trim())}`;
+    sendReportRequestEmail(
+      String(email).trim(),
+      String(firstName).trim(),
+      checkoutUrl
+    ).catch(err => console.error('[generate-report] sendReportRequestEmail error:', err.message));
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[generate-report] Error:', err.message);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /admin/claims — simple admin view protected by basic auth
 // ---------------------------------------------------------------------------
 app.get("/admin/claims", async (req, res) => {
@@ -487,9 +529,25 @@ async function initPendingPayments() {
   `).catch(err => console.error('[db] initPendingPayments error:', err.message));
 }
 
+// Initialize report_requests table for homepage form submissions
+async function initReportRequests() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS report_requests (
+      id SERIAL PRIMARY KEY,
+      first_name TEXT,
+      last_name TEXT,
+      city TEXT,
+      state TEXT,
+      email TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(err => console.error('[db] initReportRequests error:', err.message));
+}
+
 // Start — init DB then listen
 // ---------------------------------------------------------------------------
-initDb().then(() => initPendingPayments()).catch(err => {
+initDb().then(() => initPendingPayments()).then(() => initReportRequests()).catch(err => {
   console.error("[db] initDb failed:", err.message);
 });
 

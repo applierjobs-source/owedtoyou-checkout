@@ -163,7 +163,7 @@ async function sendReminderEmail(customerEmail, token, claimData = {}, reminderN
       <p>We still need your information to file your unclaimed property claim. ${urgency}</p>
       <a href="${intakeUrl}" class="cta-btn">Complete My Claim Info →</a>
       <hr class="divider"/>
-      <p style="font-size:13px;color:#475569">Your $12.95 payment is secured. We just need your details to proceed.</p>
+      <p style="font-size:13px;color:#475569">Your payment is secured. We just need your details to proceed.</p>
     </div>
   `;
 
@@ -208,4 +208,37 @@ async function sendClaimConfirmedEmail(customerEmail, claimId, firstName) {
 // Keep sendClaimIdEmail as alias for sendReceiptEmail for backwards compatibility
 const sendClaimIdEmail = sendReceiptEmail;
 
-module.exports = { sendIntakeEmail, sendReceiptEmail, sendClaimIdEmail, sendReminderEmail, sendClaimConfirmedEmail };
+/**
+ * Email: Sent after user submits the free report request form on the homepage
+ * Tells them their report is being generated and includes a pay CTA
+ */
+async function sendReportRequestEmail(customerEmail, firstName, checkoutUrl) {
+  const name = firstName || 'there';
+  const payUrl = checkoutUrl || 'https://www.owedtoyou.net/report-ready.html';
+
+  const bodyHtml = `
+    <div class="card-header">
+      <p>Report In Progress</p>
+      <h1>Your Money Owed report is being prepared</h1>
+    </div>
+    <div class="card-body">
+      <p>Hi ${name},</p>
+      <p>We're now searching unclaimed property databases across all 50 states, federal agencies, and 100+ active class action settlements for your name and address.</p>
+      <p>Your personalized <strong style="color:#fff">Money Owed report</strong> will be emailed to you within 24 hours.</p>
+      <hr class="divider"/>
+      <p><strong style="color:#fff">Want us to file everything the moment your report is ready?</strong></p>
+      <p>Pay our flat fee of <strong style="color:#fff">$95.99</strong> now and we'll file every unclaimed property claim and settlement on your behalf — no extra steps needed. Full refund if we recover nothing.</p>
+      <a href="${payUrl}" class="cta-btn">File All Claims for $95.99 →</a>
+      <hr class="divider"/>
+      <p style="font-size:13px;color:#475569">Questions? Reply to this email and we'll get back to you. This is a legitimate unclaimed property recovery service.</p>
+    </div>
+  `;
+
+  try {
+    await sendEmail(customerEmail, 'Your Money Owed report is being prepared — OwedToYou.net', emailWrapper(bodyHtml));
+  } catch (err) {
+    console.error(`[fulfillment] Failed to send report request email to ${customerEmail}:`, err.message);
+  }
+}
+
+module.exports = { sendIntakeEmail, sendReceiptEmail, sendClaimIdEmail, sendReminderEmail, sendClaimConfirmedEmail, sendReportRequestEmail };
