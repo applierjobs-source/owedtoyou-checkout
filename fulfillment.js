@@ -2,7 +2,7 @@
 
 const https = require('https');
 
-const SENDGRID_API_KEY = () => process.env.EMAIL_PASS;
+const SENDGRID_API_KEY = () => process.env.SENDGRID_API_KEY || process.env.EMAIL_PASS;
 const FROM = () => process.env.EMAIL_FROM || 'contact@owedtoyou.net';
 
 async function sendEmail(to, subject, htmlBody) {
