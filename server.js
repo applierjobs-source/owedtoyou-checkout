@@ -364,8 +364,9 @@ app.post("/generate-report", async (req, res) => {
           unclaimedRecords, settlements: matchedSettlements, reportDate
         });
 
-        // Convert to PDF
-        const pdfBuffer = await htmlToPdf(html);
+        // Convert to PDF using fast PDFKit (no browser)
+        const pdfData = { firstName, lastName, city, state, unclaimedRecords, settlements: matchedSettlements, federalSources: require('./report-generator').FEDERAL_SOURCES, reportDate };
+        const pdfBuffer = await htmlToPdf(html, pdfData);
 
         // Email PDF
         await sendReportEmail(email.trim(), firstName.trim(), pdfBuffer);
