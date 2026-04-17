@@ -149,7 +149,7 @@ select.step-input option{background:#0f172a;color:#fff}
     <div class="step-item">
       <div class="step-num-circle">3</div>
       <div class="step-item-body">
-        <div class="step-item-title">Pay $95.99 and we file everything</div>
+        <div class="step-item-title">Pay $12.95 and we file everything</div>
         <div class="step-item-desc">Full refund if we recover nothing. No subscription.</div>
       </div>
     </div>
@@ -157,7 +157,7 @@ select.step-input option{background:#0f172a;color:#fff}
 </div>
 
 <div class="footer">
-  OwedToYou.net is not a law firm. The $95.99 fee covers document preparation and processing support.<br>
+  OwedToYou.net is not a law firm. The $12.95 fee covers document preparation and processing support.<br>
   Full refund if we recover nothing. One-time charge, no subscription.<br><br>
   <a href="#" style="color:#334155">Privacy Policy</a> · <a href="#" style="color:#334155">Terms</a>
 </div>
@@ -225,7 +225,7 @@ async function submitForm() {
   btn.textContent = 'Searching databases...';
   document.getElementById('progress').style.width = '100%';
 
-  gtag('event', 'generate_lead', { currency: 'USD', value: 95.99 });
+  gtag('event', 'generate_lead', { currency: 'USD', value: 12.95 });
 
   try {
     await fetch('/generate-report', {

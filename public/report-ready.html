@@ -143,7 +143,7 @@ function renderResults(data) {
       <hr class="divider"/>
       <div class="checklist">
         <div class="check-item"><span class="check-icon">✓</span><span>We file all the paperwork on your behalf</span></div>
-        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$95.99</strong> — no hidden costs</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
       </div>
       <button class="cta-btn" onclick="startCheckout(this)">Claim My ${fmt(total)} →</button>
@@ -188,10 +188,10 @@ function renderNoResults() {
       <hr class="divider"/>
       <div class="checklist">
         <div class="check-item"><span class="check-icon">✓</span><span>We file claims across all 50 states on your behalf</span></div>
-        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$95.99</strong> — no hidden costs</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span><strong>Full refund</strong> if we recover nothing</span></div>
       </div>
-      <button class="cta-btn" onclick="startCheckout(this)">Claim My Funds — $95.99 →</button>
+      <button class="cta-btn" onclick="startCheckout(this)">Claim My $12.95 →</button>
       <p class="cta-sub">Secure checkout via Stripe</p>
     </div>
   `;
@@ -200,7 +200,7 @@ function renderNoResults() {
 async function startCheckout(btn) {
   btn.disabled = true;
   btn.textContent = 'Loading checkout...';
-  gtag('event', 'begin_checkout', { currency: 'USD', value: 95.99 });
+  gtag('event', 'begin_checkout', { currency: 'USD', value: 12.95 });
   try {
     const res = await fetch('/create-checkout-session', {
       method: 'POST',
