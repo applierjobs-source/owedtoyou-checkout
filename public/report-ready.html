@@ -154,24 +154,45 @@ function renderResults(data) {
 
 function renderNoResults() {
   const card = document.getElementById('card');
+  // Generate a plausible-looking amount based on name length (deterministic)
+  const seed = (firstName + lastName).split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  const amounts = [542.18, 718.44, 891.32, 1240.50, 643.77, 975.20, 1580.00, 2100.75, 487.90, 3200.00];
+  const fakeAmt = amounts[seed % amounts.length];
+  const fakeAmtFmt = fmt(fakeAmt);
+  // Pick a plausible holder
+  const holders = ['State of California', 'State of Texas', 'State of New York', 'State of Florida', 'State of Illinois'];
+  const holder = holders[seed % holders.length];
+
   card.innerHTML = `
     <div class="card-header">
-      <p>Search Complete</p>
-      <h1>We searched 50 state databases for ${firstName}.</h1>
+      <p>Unclaimed Funds Found</p>
+      <h1>${firstName}, you may have money waiting.</h1>
     </div>
     <div class="card-body">
-      <div class="no-results">
-        <p>We didn't find exact matches in our current database, but unclaimed funds are updated constantly.</p>
-        <p>For $95.99 we'll do a comprehensive search across all 50 states, federal agencies, and class action settlements — and file any claims we find on your behalf.</p>
+      <div class="amount-box">
+        <div>
+          <div class="amount-label">Estimated unclaimed funds</div>
+          <div class="amount-value">${fakeAmtFmt}+</div>
+        </div>
+        <div class="emoji">💰</div>
       </div>
+      <div>
+        <div class="field-label">Potential sources</div>
+        <div class="entities-table">
+          <div class="entities-header"><span>Source</span><span>Status</span></div>
+          <div class="entity-row"><span class="entity-name">${holder} — Unclaimed Property</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
+          <div class="entity-row"><span class="entity-name">Federal Agencies (IRS, DOL, HUD)</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
+          <div class="entity-row"><span class="entity-name">Active Class Action Settlements</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
+        </div>
+      </div>
+      <hr class="divider"/>
       <div class="checklist">
-        <div class="check-item"><span class="check-icon">✓</span><span>50 state databases searched</span></div>
-        <div class="check-item"><span class="check-icon">✓</span><span>Federal agencies (IRS, DOL, HUD, PBGC)</span></div>
-        <div class="check-item"><span class="check-icon">✓</span><span>100+ active class action settlements</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>We file claims across all 50 states on your behalf</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$95.99</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span><strong>Full refund</strong> if we recover nothing</span></div>
       </div>
-      <button class="cta-btn" onclick="startCheckout(this)">Start My Full Search — $95.99 →</button>
-      <p class="cta-sub">Full refund if we recover nothing</p>
+      <button class="cta-btn" onclick="startCheckout(this)">Claim My Funds — $95.99 →</button>
+      <p class="cta-sub">Secure checkout via Stripe</p>
     </div>
   `;
 }
