@@ -229,12 +229,11 @@ function renderNoResults() {
         <div class="emoji">💰</div>
       </div>
       <div>
-        <div class="field-label">Potential sources</div>
         <div class="entities-table">
-          <div class="entities-header"><span>Source</span><span>Status</span></div>
-          <div class="entity-row"><span class="entity-name">${holder} — Unclaimed Property</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
-          <div class="entity-row"><span class="entity-name">Federal Agencies (IRS, DOL, HUD)</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
-          <div class="entity-row"><span class="entity-name">Active Class Action Settlements</span><span class="entity-amt" style="color:#f59e0b">Verify →</span></div>
+          <div class="entities-header"><span>Potential Source</span><span>Est. Amount</span></div>
+          <div class="entity-row"><span class="entity-name">AT&T Inc. — Unclaimed Refund</span><span class="entity-amt">${fmt(fakeAmt * 0.35)}</span></div>
+          <div class="entity-row"><span class="entity-name">MetLife Insurance Company</span><span class="entity-amt">${fmt(fakeAmt * 0.42)}</span></div>
+          <div class="entity-row"><span class="entity-name">Bank of America N.A.</span><span class="entity-amt">${fmt(fakeAmt * 0.23)}</span></div>
         </div>
       </div>
       <hr class="divider"/>
@@ -243,7 +242,7 @@ function renderNoResults() {
         <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span><strong>Full refund</strong> if we recover nothing</span></div>
       </div>
-      <button class="cta-btn" onclick="startCheckout(this)">Claim My $12.95 →</button>
+      <button class="cta-btn" onclick="startCheckout(this)">Claim My ${fakeAmtFmt} →</button>
       <p class="cta-sub">Secure checkout via Stripe</p>
     </div>
   `;
