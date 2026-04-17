@@ -334,12 +334,28 @@ app.get("/search-unclaimed", async (req, res) => {
     const lastNameUpper = lastName ? lastName.trim().toUpperCase() : null;
 
     // Search by first name + last name if available, otherwise just first name
-    const result = await pool.query(
-      lastNameUpper
-        ? `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`
-        : `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 ORDER BY amount DESC LIMIT 20`,
-      lastNameUpper ? [firstName, lastNameUpper] : [firstName]
-    ).catch(() => ({ rows: [] }));
+    // Try Postgres first, fall back to external search API
+    let rows = [];
+    try {
+      const result = await pool.query(
+        lastNameUpper
+          ? `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`
+          : `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 ORDER BY amount DESC LIMIT 20`,
+        lastNameUpper ? [firstName, lastNameUpper] : [firstName]
+      );
+      rows = result.rows;
+    } catch(e) { rows = []; }
+
+    // If Postgres has no data yet, try our pipeline search API
+    if (rows.length === 0 && process.env.PIPELINE_SEARCH_URL) {
+      try {
+        const ext = await fetch(`${process.env.PIPELINE_SEARCH_URL}/search?firstName=${firstName}&lastName=${lastNameUpper||''}`);
+        const extData = await ext.json();
+        rows = extData.rows || [];
+      } catch(e) {}
+    }
+
+    const result = { rows };
 
     if (result.rows.length === 0) {
       return res.json({ entities: [], total: 0 });
