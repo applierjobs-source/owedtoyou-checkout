@@ -1,1019 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Find Out How Much Money Is Owed to You — OwedToYou.net</title>
-  <meta name="description" content="We search 50 state databases, federal agencies, and active class action settlements to build your personalized Money Owed report — then file every claim on your behalf."/>
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4S7RB3FNTK"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-4S7RB3FNTK');
-  </script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OwedToYou.net — Find Your Unclaimed Money</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a1628;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
 
-    :root {
-      --navy: #0D1B2A;
-      --card-bg: #0f172a;
-      --card-border: #1e293b;
-      --emerald: #10b981;
-      --emerald-light: #34d399;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --dim: #64748b;
-    }
+/* Progress bar */
+.progress-bar{position:fixed;top:0;left:0;height:3px;background:#10b981;transition:width 0.4s ease;z-index:100}
 
-    html { scroll-behavior: smooth; }
+/* Logo */
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;padding:32px 0 0}
+.logo-text{font-size:17px;font-weight:700;color:#fff}
 
-    body {
-      background: var(--navy);
-      color: var(--text);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      line-height: 1.5;
-    }
+/* Main container */
+.form-wrap{max-width:560px;margin:0 auto;padding:60px 24px 40px;min-height:80vh;display:flex;flex-direction:column;justify-content:center}
 
-    /* ─── NAV ─── */
-    .nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--card-border);
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-    .logo-text {
-      font-size: 17px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.3px;
-    }
-    .nav-cta {
-      background: var(--emerald);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 9px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 0.15s;
-    }
-    .nav-cta:hover { background: var(--emerald-light); }
+/* Steps */
+.step{display:none;animation:fadeUp 0.3s ease}
+.step.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
-    /* ─── HERO ─── */
-    .hero {
-      text-align: center;
-      padding: 64px 24px 48px;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16,185,129,0.12);
-      border: 1px solid rgba(16,185,129,0.3);
-      border-radius: 100px;
-      padding: 5px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--emerald-light);
-      letter-spacing: 0.5px;
-      margin-bottom: 24px;
-      text-transform: uppercase;
-    }
-    .hero h1 {
-      font-size: clamp(28px, 5vw, 52px);
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -1px;
-      color: #fff;
-      margin-bottom: 20px;
-    }
-    .hero h1 span { color: var(--emerald); }
-    .hero p {
-      font-size: clamp(16px, 2.5vw, 19px);
-      color: var(--muted);
-      line-height: 1.65;
-      max-width: 620px;
-      margin: 0 auto 36px;
-    }
-    .hero-stats {
-      display: flex;
-      justify-content: center;
-      gap: 32px;
-      flex-wrap: wrap;
-      margin-bottom: 40px;
-    }
-    .hero-stat {
-      text-align: center;
-    }
-    .hero-stat-val {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--emerald-light);
-    }
-    .hero-stat-label {
-      font-size: 12px;
-      color: var(--dim);
-      margin-top: 2px;
-    }
+.step-num{font-size:12px;color:#475569;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.step-label{font-size:30px;font-weight:700;color:#fff;line-height:1.25;margin-bottom:32px}
+@media(max-width:480px){.step-label{font-size:24px}}
 
-    /* ─── TWO-COLUMN LAYOUT ─── */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 32px;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 16px 64px;
-    }
-    @media(min-width: 900px) {
-      .main-grid {
-        grid-template-columns: 1fr 1fr;
-        align-items: start;
-        gap: 40px;
-      }
-    }
+/* Input */
+.step-input{width:100%;background:transparent;border:none;border-bottom:2px solid #1e3a5f;color:#fff;font-size:22px;padding:12px 0;outline:none;transition:border-color 0.2s;caret-color:#10b981}
+.step-input:focus{border-bottom-color:#10b981}
+.step-input::placeholder{color:#334155}
 
-    /* ─── FORM CARD ─── */
-    .form-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-      position: sticky;
-      top: 20px;
-    }
-    .form-card-header {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      padding: 22px 28px;
-    }
-    .form-card-header p {
-      color: #a7f3d0;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .form-card-header h2 {
-      color: #fff;
-      font-size: 20px;
-      font-weight: 700;
-      line-height: 1.3;
-    }
-    .form-body {
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .field-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .field label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--dim);
-    }
-    .field input,
-    .field select {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 15px;
-      color: var(--text);
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.15s;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    .field select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 36px;
-      cursor: pointer;
-    }
-    .field select option { background: #1e293b; }
-    .field input:focus,
-    .field select:focus {
-      border-color: var(--emerald);
-      box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
-    }
-    .field input::placeholder { color: #475569; }
-    .submit-btn {
-      width: 100%;
-      background: var(--emerald);
-      color: #fff;
-      border: none;
-      border-radius: 14px;
-      padding: 17px;
-      font-size: 17px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s, transform 0.1s;
-      box-shadow: 0 10px 30px -10px rgba(16,185,129,0.45);
-      position: relative;
-    }
-    .submit-btn:hover:not(:disabled) {
-      background: var(--emerald-light);
-      transform: translateY(-1px);
-    }
-    .submit-btn:disabled { opacity: 0.7; cursor: default; }
-    .form-sub {
-      text-align: center;
-      font-size: 12px;
-      color: var(--dim);
-      line-height: 1.5;
-    }
-    .form-sub strong { color: var(--muted); }
+select.step-input option{background:#0f172a;color:#fff}
 
-    /* loading spinner */
-    .spinner {
-      display: none;
-      width: 18px;
-      height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { display: none; }
-    .btn-default { display: block; }
+/* Next button */
+.next-btn{display:inline-flex;align-items:center;gap:8px;margin-top:28px;background:#10b981;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.15s}
+.next-btn:hover{background:#34d399}
+.next-btn.full{width:100%;justify-content:center;font-size:16px;padding:16px}
+.next-btn:disabled{opacity:0.6;cursor:not-allowed}
 
-    /* ─── SAMPLE REPORT PREVIEW ─── */
-    .report-preview-wrap {
-      position: relative;
-    }
-    .report-preview {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-    .report-header {
-      background: linear-gradient(135deg, #0f2744 0%, #0D1B2A 100%);
-      border-bottom: 1px solid var(--card-border);
-      padding: 18px 22px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .report-header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .report-logo-icon {
-      width: 28px;
-      height: 28px;
-      background: rgba(16,185,129,0.15);
-      border: 1px solid rgba(16,185,129,0.3);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .report-title-label {
-      font-size: 11px;
-      color: var(--dim);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-    .report-title-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .report-confidential {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--emerald);
-      background: rgba(16,185,129,0.1);
-      border: 1px solid rgba(16,185,129,0.25);
-      border-radius: 6px;
-      padding: 4px 8px;
-    }
-    .report-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-      border-bottom: 1px solid var(--card-border);
-    }
-    .stat-box {
-      padding: 16px 14px;
-      text-align: center;
-      border-right: 1px solid var(--card-border);
-    }
-    .stat-box:last-child { border-right: none; }
-    .stat-val {
-      font-size: clamp(14px, 2.5vw, 20px);
-      font-weight: 800;
-      color: var(--emerald-light);
-      line-height: 1.1;
-    }
-    .stat-label {
-      font-size: 10px;
-      color: var(--dim);
-      margin-top: 4px;
-      line-height: 1.3;
-    }
-    .report-section {
-      padding: 16px 18px;
-    }
-    .report-section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .report-section-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .report-badge {
-      font-size: 10px;
-      background: rgba(16,185,129,0.12);
-      color: var(--emerald-light);
-      border: 1px solid rgba(16,185,129,0.25);
-      border-radius: 6px;
-      padding: 2px 8px;
-      font-weight: 600;
-    }
-    .report-table {
-      background: #1e293b;
-      border-radius: 10px;
-      overflow: hidden;
-      font-size: 12px;
-    }
-    .report-table-header {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 8px 12px;
-      background: #152234;
-      color: var(--dim);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    .report-table-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 9px 12px;
-      border-top: 1px solid #2d3f55;
-      color: var(--muted);
-      align-items: center;
-    }
-    .report-table-row .match-name { color: var(--text); font-weight: 600; }
-    .report-table-row .match-amt { color: var(--emerald-light); font-weight: 700; }
-    .report-table-row .match-status {
-      font-size: 10px;
-      background: rgba(16,185,129,0.1);
-      color: var(--emerald-light);
-      border-radius: 4px;
-      padding: 2px 6px;
-      font-weight: 600;
-      display: inline-block;
-    }
-    .report-section-sub {
-      font-size: 12px;
-      color: var(--dim);
-      margin-top: 8px;
-    }
+/* Back button */
+.back-btn{position:fixed;top:20px;left:20px;background:none;border:none;color:#475569;cursor:pointer;font-size:13px;display:none;align-items:center;gap:6px;padding:8px}
+.back-btn.visible{display:flex}
+.back-btn:hover{color:#94a3b8}
 
-    /* blur overlay */
-    .report-blur-section {
-      position: relative;
-    }
-    .report-blur-inner {
-      filter: blur(4px);
-      pointer-events: none;
-      user-select: none;
-    }
-    .report-lock-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, rgba(15,23,42,0.92) 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 20px;
-      text-align: center;
-    }
-    .lock-icon {
-      width: 40px;
-      height: 40px;
-      background: rgba(16,185,129,0.15);
-      border: 1.5px solid rgba(16,185,129,0.4);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .lock-text {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.5;
-      max-width: 260px;
-    }
-    .lock-cta {
-      background: var(--emerald);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 11px 22px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 4px;
-    }
-    .lock-cta:hover { background: var(--emerald-light); }
+/* Enter hint */
+.enter-hint{margin-top:12px;font-size:12px;color:#334155}
+.enter-hint span{color:#475569}
 
-    /* ─── HOW IT WORKS ─── */
-    .section {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 64px 24px;
-    }
-    .section-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--emerald);
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: clamp(22px, 4vw, 34px);
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.5px;
-      margin-bottom: 40px;
-    }
-    .steps-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-    @media(min-width: 700px) {
-      .steps-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    .step-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 24px;
-      position: relative;
-    }
-    .step-number {
-      width: 36px;
-      height: 36px;
-      background: rgba(16,185,129,0.12);
-      border: 1px solid rgba(16,185,129,0.3);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--emerald-light);
-      margin-bottom: 14px;
-    }
-    .step-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 8px;
-    }
-    .step-body {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
+/* Stats */
+.stats{display:flex;justify-content:center;gap:40px;padding:48px 24px 0;max-width:560px;margin:0 auto;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-val{font-size:28px;font-weight:800;color:#10b981}
+.stat-label{font-size:12px;color:#475569;margin-top:4px}
 
-    /* ─── WHY CHOOSE US ─── */
-    .why-section {
-      background: #080f1a;
-      border-top: 1px solid var(--card-border);
-      border-bottom: 1px solid var(--card-border);
-    }
-    .why-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    @media(min-width: 700px) {
-      .why-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    .why-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 20px;
-    }
-    .why-card-icon {
-      font-size: 22px;
-      margin-bottom: 10px;
-    }
-    .why-card-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--emerald-light);
-      margin-bottom: 8px;
-    }
-    .why-card-body {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
+/* How it works */
+.section{max-width:560px;margin:48px auto 0;padding:0 24px}
+.section-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:20px}
+.steps-list{display:flex;flex-direction:column;gap:16px}
+.step-item{display:flex;gap:16px;align-items:flex-start}
+.step-num-circle{width:32px;height:32px;border-radius:50%;background:#0d9488;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.step-item-body{}
+.step-item-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
+.step-item-desc{font-size:13px;color:#64748b;line-height:1.5}
 
-    /* ─── TRUST STRIP ─── */
-    .trust-strip {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 28px;
-    }
-    @media(min-width: 600px) {
-      .trust-strip { grid-template-columns: repeat(3, 1fr); }
-    }
-    .trust-item {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 16px 14px;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-      line-height: 1.5;
-    }
-    .trust-item strong { color: var(--emerald); display: block; font-size: 18px; margin-bottom: 4px; }
-
-    /* ─── LEGAL ─── */
-    .legal-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 24px 64px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    @media(min-width: 700px) {
-      .legal-section { grid-template-columns: 1fr 1fr; }
-    }
-    .legal-box {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 22px;
-    }
-    .legal-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 12px;
-    }
-    .legal-box p {
-      font-size: 12px;
-      color: var(--dim);
-      line-height: 1.65;
-      margin-bottom: 10px;
-    }
-    .legal-box p:last-child { margin-bottom: 0; }
-
-    /* ─── FOOTER ─── */
-    .footer {
-      border-top: 1px solid var(--card-border);
-      padding: 24px;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .footer a {
-      font-size: 13px;
-      color: var(--dim);
-      text-decoration: none;
-    }
-    .footer a:hover { color: var(--muted); }
-    .footer span { color: var(--card-border); }
-
-    /* ─── STATUS MESSAGE ─── */
-    #formStatus {
-      display: none;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 14px;
-      font-weight: 500;
-      text-align: center;
-    }
-    #formStatus.error {
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.3);
-      color: #f87171;
-    }
-
-    /* ─── SECTION DIVIDER ─── */
-    .divider {
-      border: none;
-      border-top: 1px solid var(--card-border);
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-  </style>
+/* Footer */
+.footer{max-width:560px;margin:48px auto 32px;padding:0 24px;font-size:11px;color:#334155;text-align:center;line-height:1.7}
+</style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4S7RB3FNTK"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-4S7RB3FNTK');</script>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav">
-    <a href="/" class="logo" aria-label="OwedToYou.net home">
-      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
-        <circle cx="15" cy="15" r="14" stroke="#10b981" stroke-width="2"/>
-        <text x="15" y="20" text-anchor="middle" fill="#10b981" font-size="13" font-weight="700" font-family="system-ui">$</text>
-      </svg>
-      <span class="logo-text">OwedToYou.net</span>
-    </a>
-    <a href="#search-form" class="nav-cta">Find My Money →</a>
-  </div>
-</nav>
+<div class="progress-bar" id="progress"></div>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-badge">
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-      <circle cx="5" cy="5" r="4" fill="#10b981"/>
-    </svg>
-    Free Search — No Credit Card Required
-  </div>
-  <h1>Find Out How Much Money<br/>Is <span>Owed to You</span></h1>
-  <p>We search 50 state databases, federal agencies, and active class action settlements to build your personalized Money Owed report — then file every claim on your behalf.</p>
-  <div class="hero-stats">
-    <div class="hero-stat">
-      <div class="hero-stat-val">50</div>
-      <div class="hero-stat-label">State databases searched</div>
-    </div>
-    <div class="hero-stat">
-      <div class="hero-stat-val">100+</div>
-      <div class="hero-stat-label">Active settlements tracked</div>
-    </div>
-    <div class="hero-stat">
-      <div class="hero-stat-val">$842</div>
-      <div class="hero-stat-label">Avg. confirmed unclaimed</div>
-    </div>
-  </div>
-</section>
+<button class="back-btn" id="backBtn" onclick="prevStep()">← Back</button>
 
-<!-- MAIN GRID: FORM + SAMPLE REPORT -->
-<div class="main-grid" id="search-form">
-
-  <!-- FORM CARD -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <p>Free Search</p>
-      <h2>Search for Your Unclaimed Money</h2>
-    </div>
-    <form class="form-body" id="reportForm" novalidate>
-      <div class="field-row">
-        <div class="field">
-          <label for="firstName">First Name</label>
-          <input type="text" id="firstName" name="firstName" placeholder="Jane" required autocomplete="given-name"/>
-        </div>
-        <div class="field">
-          <label for="lastName">Last Name</label>
-          <input type="text" id="lastName" name="lastName" placeholder="Smith" required autocomplete="family-name"/>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="city">Current City</label>
-          <input type="text" id="city" name="city" placeholder="Austin" required autocomplete="address-level2"/>
-        </div>
-        <div class="field">
-          <label for="state">State</label>
-          <select id="state" name="state" required autocomplete="address-level1">
-            <option value="">Select state</option>
-            <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
-            <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
-            <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
-            <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
-            <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
-            <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
-            <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
-            <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
-            <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
-            <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
-            <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
-            <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
-            <option>WI</option><option>WY</option><option>DC</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email" placeholder="jane@example.com" required autocomplete="email"/>
-      </div>
-      <div id="formStatus" role="alert"></div>
-      <button type="submit" class="submit-btn" id="submitBtn">
-        <span class="btn-default">Find My Money →</span>
-        <span class="loading-text">Searching 50 state databases…</span>
-        <div class="spinner"></div>
-      </button>
-      <p class="form-sub">Your search is <strong>free</strong>. No credit card required to see what we find. We'll email your personalized report within minutes.</p>
-    </form>
-  </div>
-
-  <!-- SAMPLE REPORT PREVIEW -->
-  <div class="report-preview-wrap">
-    <div class="report-preview">
-      <!-- Report header — always visible -->
-      <div class="report-header">
-        <div class="report-header-left">
-          <div class="report-logo-icon">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="6" stroke="#10b981" stroke-width="1.5"/>
-              <text x="7" y="11" text-anchor="middle" fill="#10b981" font-size="7" font-weight="700" font-family="system-ui">$</text>
-            </svg>
-          </div>
-          <div>
-            <div class="report-title-label">Money Owed Report</div>
-            <div class="report-title-name">Your Name — Confidential</div>
-          </div>
-        </div>
-        <span class="report-confidential">Confidential</span>
-      </div>
-
-      <!-- Stat boxes — always visible -->
-      <div class="report-stats">
-        <div class="stat-box">
-          <div class="stat-val">$842.83</div>
-          <div class="stat-label">Confirmed Unclaimed</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val">$25,000+</div>
-          <div class="stat-label">Potential from Settlements</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val">18</div>
-          <div class="stat-label">Active Settlements Matched</div>
-        </div>
-      </div>
-
-      <!-- Section header — always visible -->
-      <div class="report-section">
-        <div class="report-section-header">
-          <span class="report-section-title">Unclaimed Property — Texas</span>
-          <span class="report-badge">5 exact matches</span>
-        </div>
-
-        <!-- Table — blurred rows -->
-        <div class="report-blur-section">
-          <div class="report-blur-inner">
-            <div class="report-table">
-              <div class="report-table-header">
-                <span>Holder</span><span>Amount</span><span>Type</span><span>Status</span>
-              </div>
-              <div class="report-table-row">
-                <span class="match-name">First National Bank</span>
-                <span class="match-amt">$312.50</span>
-                <span>Checking</span>
-                <span><span class="match-status">Confirmed</span></span>
-              </div>
-              <div class="report-table-row">
-                <span class="match-name">AT&amp;T Texas</span>
-                <span class="match-amt">$87.14</span>
-                <span>Utility</span>
-                <span><span class="match-status">Confirmed</span></span>
-              </div>
-              <div class="report-table-row">
-                <span class="match-name">Texas Life Insurance Co.</span>
-                <span class="match-amt">$250.00</span>
-                <span>Insurance</span>
-                <span><span class="match-status">Confirmed</span></span>
-              </div>
-              <div class="report-table-row">
-                <span class="match-name">Austin Energy</span>
-                <span class="match-amt">$45.19</span>
-                <span>Utility</span>
-                <span><span class="match-status">Confirmed</span></span>
-              </div>
-              <div class="report-table-row">
-                <span class="match-name">Chase Bank NA</span>
-                <span class="match-amt">$148.00</span>
-                <span>Savings</span>
-                <span><span class="match-status">Confirmed</span></span>
-              </div>
-            </div>
-            <p class="report-section-sub">+ 13 more states searched · Federal agencies · 100+ class action settlements</p>
-          </div>
-          <!-- Lock overlay -->
-          <div class="report-lock-overlay" aria-label="Report locked — submit the form to unlock">
-            <div class="lock-icon">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <rect x="3" y="8" width="12" height="9" rx="2" stroke="#10b981" stroke-width="1.5"/>
-                <path d="M6 8V6a3 3 0 016 0v2" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <p class="lock-text">Your personalized report includes confirmed unclaimed property, matched class action settlements, and federal fund searches</p>
-            <a href="#search-form" class="lock-cta">Get My Free Report →</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /main-grid -->
-
-<hr class="divider"/>
-
-<!-- HOW IT WORKS -->
-<section class="section">
-  <div class="section-label">Simple Process</div>
-  <div class="section-title">How It Works</div>
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-number">1</div>
-      <div class="step-title">Enter your name and address</div>
-      <p class="step-body">Fill out our free search form. No credit card required. Just your name, city, state, and email so we can send your report.</p>
-    </div>
-    <div class="step-card">
-      <div class="step-number">2</div>
-      <div class="step-title">We search everything</div>
-      <p class="step-body">Our system checks 50 state unclaimed property databases, federal agencies including the FTC and FDIC, and 100+ active class action settlements for your name.</p>
-    </div>
-    <div class="step-card">
-      <div class="step-number">3</div>
-      <div class="step-title">Pay $95.99, we file everything</div>
-      <p class="step-body">Review your personalized Money Owed report. Pay our flat filing fee and we handle all the paperwork — every claim, every settlement. You get the checks.</p>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- WHY CHOOSE US -->
-<div class="why-section">
-  <section class="section">
-    <div class="section-label">Why Us</div>
-    <div class="section-title">Why Choose OwedToYou.net</div>
-    <div class="why-grid">
-      <div class="why-card">
-        <div class="why-card-icon">⚡</div>
-        <div class="why-card-title">Fast Turnaround</div>
-        <p class="why-card-body">We file your claim package quickly so you can move from uncertainty to action in minutes, not days.</p>
-      </div>
-      <div class="why-card">
-        <div class="why-card-icon">📋</div>
-        <div class="why-card-title">Paperwork Experts</div>
-        <p class="why-card-body">Our team prepares the required forms and supporting details to reduce rejection risk and rework.</p>
-      </div>
-      <div class="why-card">
-        <div class="why-card-icon">🔒</div>
-        <div class="why-card-title">Secure by Design</div>
-        <p class="why-card-body">Payments are handled through Stripe and sensitive information is kept to only what is needed to process your request.</p>
-      </div>
-    </div>
-    <div class="trust-strip">
-      <div class="trust-item"><strong>10,000+</strong> successful claims initiated</div>
-      <div class="trust-item"><strong>A+ support</strong> with real email follow-up</div>
-      <div class="trust-item"><strong>No subscription</strong> one-time checkout only</div>
-    </div>
-  </section>
+<div class="logo">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="13" stroke="#10b981" stroke-width="2"/>
+    <text x="14" y="19" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700" font-family="system-ui">$</text>
+  </svg>
+  <span class="logo-text">OwedToYou.net</span>
 </div>
 
-<!-- LEGAL -->
-<div class="legal-section" id="terms">
-  <div class="legal-box">
-    <div class="legal-title">Terms and Conditions</div>
-    <p>By using this service, you authorize us to assist with preparing your unclaimed property claim paperwork based on the information you provide. We do not guarantee a specific recovery amount or approval timeline from state agencies.</p>
-    <p>The $95.99 fee covers document preparation and processing support for all claims identified in your personalized report. This is a one-time charge and not a subscription. Refund requests are reviewed case-by-case within 14 days of purchase. Full refund issued if we recover nothing.</p>
+<div class="form-wrap">
+
+  <!-- Step 1: First Name -->
+  <div class="step active" id="step-0">
+    <div class="step-num">Step 1 of 5</div>
+    <div class="step-label">What's your first name?</div>
+    <input class="step-input" id="firstName" type="text" placeholder="First name" autocomplete="given-name" autofocus/>
+    <button class="next-btn" onclick="nextStep()">Continue →</button>
+    <div class="enter-hint">or press <span>Enter ↵</span></div>
   </div>
-  <div class="legal-box" id="privacy">
-    <div class="legal-title">Privacy Policy</div>
-    <p>We collect only the information required to prepare your paperwork and provide customer support. Payment data is processed by Stripe and is not stored on our servers.</p>
-    <p>We do not sell your personal information. We may use trusted service providers for hosting and operations, such as GitHub and Railway, under confidentiality and security controls.</p>
+
+  <!-- Step 2: Last Name -->
+  <div class="step" id="step-1">
+    <div class="step-num">Step 2 of 5</div>
+    <div class="step-label">And your last name?</div>
+    <input class="step-input" id="lastName" type="text" placeholder="Last name" autocomplete="family-name"/>
+    <button class="next-btn" onclick="nextStep()">Continue →</button>
+    <div class="enter-hint">or press <span>Enter ↵</span></div>
+  </div>
+
+  <!-- Step 3: State -->
+  <div class="step" id="step-2">
+    <div class="step-num">Step 3 of 5</div>
+    <div class="step-label">What state do you live in?</div>
+    <select class="step-input" id="state">
+      <option value="">Select your state</option>
+      <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
+      <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
+      <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+      <option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+      <option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option>
+      <option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option>
+      <option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+      <option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+      <option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option>
+      <option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+    </select>
+    <button class="next-btn" onclick="nextStep()">Continue →</button>
+  </div>
+
+  <!-- Step 4: City -->
+  <div class="step" id="step-3">
+    <div class="step-num">Step 4 of 5</div>
+    <div class="step-label">What city?</div>
+    <input class="step-input" id="city" type="text" placeholder="City" autocomplete="address-level2"/>
+    <button class="next-btn" onclick="nextStep()">Continue →</button>
+    <div class="enter-hint">or press <span>Enter ↵</span></div>
+  </div>
+
+  <!-- Step 5: Email -->
+  <div class="step" id="step-4">
+    <div class="step-num">Step 5 of 5</div>
+    <div class="step-label">Where should we send your results?</div>
+    <input class="step-input" id="email" type="email" placeholder="your@email.com" autocomplete="email"/>
+    <button class="next-btn full" id="submitBtn" onclick="submitForm()">Find My Money →</button>
+    <div class="enter-hint">Free search — no credit card required</div>
+  </div>
+
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="stat-val">50</div><div class="stat-label">State databases searched</div></div>
+  <div class="stat"><div class="stat-val">100+</div><div class="stat-label">Active settlements tracked</div></div>
+  <div class="stat"><div class="stat-val">$842</div><div class="stat-label">Avg. confirmed unclaimed</div></div>
+</div>
+
+<!-- How it works -->
+<div class="section">
+  <div class="section-title">How it works</div>
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num-circle">1</div>
+      <div class="step-item-body">
+        <div class="step-item-title">Enter your name and address</div>
+        <div class="step-item-desc">Free search — takes 30 seconds</div>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num-circle">2</div>
+      <div class="step-item-body">
+        <div class="step-item-title">We show you what's owed</div>
+        <div class="step-item-desc">We search 50 states and federal agencies for funds in your name</div>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num-circle">3</div>
+      <div class="step-item-body">
+        <div class="step-item-title">Pay $95.99 and we file everything</div>
+        <div class="step-item-desc">Full refund if we recover nothing. No subscription.</div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- FOOTER -->
-<footer class="footer">
-  <a href="#terms">Terms and Conditions</a>
-  <span>•</span>
-  <a href="#privacy">Privacy Policy</a>
-  <span>•</span>
-  <span style="font-size:13px;color:var(--dim)">© 2025 OwedToYou.net</span>
-</footer>
+<div class="footer">
+  OwedToYou.net is not a law firm. The $95.99 fee covers document preparation and processing support.<br>
+  Full refund if we recover nothing. One-time charge, no subscription.<br><br>
+  <a href="#" style="color:#334155">Privacy Policy</a> · <a href="#" style="color:#334155">Terms</a>
+</div>
 
 <script>
-  const form = document.getElementById('reportForm');
-  const submitBtn = document.getElementById('submitBtn');
-  const formStatus = document.getElementById('formStatus');
-  const btnDefault = submitBtn.querySelector('.btn-default');
-  const loadingText = submitBtn.querySelector('.loading-text');
-  const spinner = submitBtn.querySelector('.spinner');
+let current = 0;
+const TOTAL = 5;
+const inputs = ['firstName','lastName','state','city','email'];
 
-  function setLoading(on) {
-    submitBtn.disabled = on;
-    btnDefault.style.display = on ? 'none' : 'block';
-    loadingText.style.display = on ? 'block' : 'none';
-    spinner.style.display = on ? 'block' : 'none';
+function updateProgress() {
+  const pct = (current / TOTAL) * 100;
+  document.getElementById('progress').style.width = pct + '%';
+  document.getElementById('backBtn').className = current > 0 ? 'back-btn visible' : 'back-btn';
+}
+
+function nextStep() {
+  const val = document.getElementById(inputs[current]).value.trim();
+  if (!val) {
+    document.getElementById(inputs[current]).focus();
+    return;
   }
-
-  function showError(msg) {
-    formStatus.textContent = msg;
-    formStatus.className = 'error';
-    formStatus.style.display = 'block';
+  if (current < TOTAL - 1) {
+    document.getElementById('step-' + current).classList.remove('active');
+    current++;
+    const next = document.getElementById('step-' + current);
+    next.classList.add('active');
+    setTimeout(() => {
+      const inp = document.getElementById(inputs[current]);
+      if (inp) inp.focus();
+    }, 50);
+    updateProgress();
   }
+}
 
-  form.addEventListener('submit', async (e) => {
+function prevStep() {
+  if (current > 0) {
+    document.getElementById('step-' + current).classList.remove('active');
+    current--;
+    document.getElementById('step-' + current).classList.add('active');
+    setTimeout(() => document.getElementById(inputs[current]).focus(), 50);
+    updateProgress();
+  }
+}
+
+// Enter key advances
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
     e.preventDefault();
-    formStatus.style.display = 'none';
+    if (current < TOTAL - 1) nextStep();
+    else submitForm();
+  }
+});
 
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName  = document.getElementById('lastName').value.trim();
-    const city      = document.getElementById('city').value.trim();
-    const state     = document.getElementById('state').value;
-    const email     = document.getElementById('email').value.trim();
+async function submitForm() {
+  const firstName = document.getElementById('firstName').value.trim();
+  const lastName  = document.getElementById('lastName').value.trim();
+  const state     = document.getElementById('state').value.trim();
+  const city      = document.getElementById('city').value.trim();
+  const email     = document.getElementById('email').value.trim();
 
-    if (!firstName || !lastName || !city || !state || !email) {
-      showError('Please fill in all fields before searching.');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showError('Please enter a valid email address.');
-      return;
-    }
+  if (!email) { document.getElementById('email').focus(); return; }
 
-    setLoading(true);
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Searching databases...';
+  document.getElementById('progress').style.width = '100%';
 
-    // GA4 event
-    if (typeof gtag === 'function') {
-      gtag('event', 'report_search', { firstName, city, state });
-    }
+  gtag('event', 'generate_lead', { currency: 'USD', value: 95.99 });
 
-    try {
-      const res = await fetch('/generate-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, lastName, city, state, email })
-      });
-      const data = await res.json();
-      if (data.success) {
-        window.location.href = '/report-ready.html?email=' + encodeURIComponent(email) + '&name=' + encodeURIComponent(firstName);
-      } else {
-        showError(data.error || 'Something went wrong. Please try again.');
-        setLoading(false);
-      }
-    } catch (err) {
-      showError('Network error. Please try again.');
-      setLoading(false);
-    }
-  });
+  try {
+    await fetch('/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, city, state, email })
+    });
+  } catch(e) {}
+
+  window.location.href = '/report-ready.html?name=' + encodeURIComponent(firstName) + '&lastName=' + encodeURIComponent(lastName) + '&email=' + encodeURIComponent(email);
+}
+
+updateProgress();
 </script>
 </body>
 </html>

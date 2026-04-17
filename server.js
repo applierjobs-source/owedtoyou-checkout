@@ -323,6 +323,59 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /search-unclaimed — look up unclaimed property by name in CA database
+// ---------------------------------------------------------------------------
+app.get("/search-unclaimed", async (req, res) => {
+  const { name, lastName, email } = req.query;
+  if (!name) return res.json({ entities: [], total: 0 });
+
+  try {
+    const firstName = name.trim().toUpperCase();
+    const lastNameUpper = lastName ? lastName.trim().toUpperCase() : null;
+
+    // Search by first name + last name if available, otherwise just first name
+    const result = await pool.query(
+      lastNameUpper
+        ? `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`
+        : `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 ORDER BY amount DESC LIMIT 20`,
+      lastNameUpper ? [firstName, lastNameUpper] : [firstName]
+    ).catch(() => ({ rows: [] }));
+
+    if (result.rows.length === 0) {
+      return res.json({ entities: [], total: 0 });
+    }
+
+    // Group by address, return the address with most/highest value
+    const byAddr = {};
+    result.rows.forEach(r => {
+      const key = `${r.address}|${r.city}|${r.state}`;
+      if (!byAddr[key]) byAddr[key] = { address: r.address, city: r.city, state: r.state, entities: [] };
+      byAddr[key].entities.push({ h: r.holder, v: parseFloat(r.amount) });
+    });
+
+    // Pick the address with highest total
+    let best = null, bestTotal = 0;
+    Object.values(byAddr).forEach(a => {
+      const t = a.entities.reduce((s, e) => s + e.v, 0);
+      if (t > bestTotal) { bestTotal = t; best = a; }
+    });
+
+    if (!best) return res.json({ entities: [], total: 0 });
+
+    res.json({
+      entities: best.entities,
+      total: bestTotal,
+      address: best.address,
+      city: best.city,
+      state: best.state
+    });
+  } catch(err) {
+    console.error('[search-unclaimed] Error:', err.message);
+    res.json({ entities: [], total: 0 });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /generate-report — homepage form submission
 // ---------------------------------------------------------------------------
 app.post("/generate-report", async (req, res) => {
@@ -572,6 +625,9 @@ async function initReportRequests() {
 
 // Start — init DB then listen
 // ---------------------------------------------------------------------------
+// Run CA data migration on startup (skips if already loaded)
+try { require('./migrate-ca-data').migrate(); } catch(e) { console.log('[migrate] Skipping:', e.message); }
+
 initDb().then(() => initPendingPayments()).then(() => initReportRequests()).catch(err => {
   console.error("[db] initDb failed:", err.message);
 });
