@@ -62,9 +62,17 @@ body{background:#020817;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div class="card" id="card">
-  <div class="loading-state" id="loadingState">
-    <div class="spinner"></div>
-    <p>Searching unclaimed property databases...</p>
+  <div id="scanState">
+    <div class="card-header" id="scanHeader">
+      <p id="scanLabel">SCANNING</p>
+      <h1 id="scanTitle">Searching databases for <span id="scanName"></span>...</h1>
+    </div>
+    <div style="padding:24px">
+      <div style="background:#1e293b;border-radius:12px;overflow:hidden;height:8px;margin-bottom:20px">
+        <div id="scanBar" style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);width:0%;transition:width 0.5s ease;border-radius:12px"></div>
+      </div>
+      <div id="scanSteps" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
   </div>
 </div>
 
@@ -80,18 +88,59 @@ const firstName = params.get('name') || 'there';
 const lastName = params.get('lastName') || '';
 const email = params.get('email') || '';
 
-// Fetch results from server
-async function loadResults() {
-  try {
-    const r = await fetch('/search-unclaimed?name=' + encodeURIComponent(firstName) + 
-                          '&lastName=' + encodeURIComponent(lastName) +
-                          '&email=' + encodeURIComponent(email));
-    const data = await r.json();
-    renderResults(data);
-  } catch(e) {
-    renderNoResults();
-  }
-}
+// Scan steps shown during 15-second animation
+const SCAN_STEPS = [
+  'Searching California state records...',
+  'Searching Texas state records...',
+  'Searching New York state records...',
+  'Searching Florida state records...',
+  'Checking IRS unclaimed refunds...',
+  'Checking FDIC failed bank deposits...',
+  'Matching active class action settlements...',
+  'Checking federal pension records (PBGC)...',
+  'Searching 46 additional states...',
+  'Verifying matches for ' + firstName + ' ' + lastName + '...',
+  'Compiling your results...',
+];
+
+document.getElementById('scanName').textContent = firstName + (lastName ? ' ' + lastName : '');
+
+const stepsEl = document.getElementById('scanSteps');
+const barEl   = document.getElementById('scanBar');
+let resultsData = null;
+
+// Fetch in background immediately
+fetch('/search-unclaimed?name=' + encodeURIComponent(firstName) +
+      '&lastName=' + encodeURIComponent(lastName) +
+      '&email=' + encodeURIComponent(email))
+  .then(r => r.json()).then(d => { resultsData = d; }).catch(() => { resultsData = { entities: [], total: 0 }; });
+
+// Show steps over 15 seconds
+const stepDelay = 14000 / SCAN_STEPS.length;
+SCAN_STEPS.forEach((label, i) => {
+  setTimeout(() => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
+    div.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + label + '</span>';
+    stepsEl.appendChild(div);
+    barEl.style.width = ((i + 1) / SCAN_STEPS.length * 92) + '%';
+  }, i * stepDelay);
+});
+
+// Show results after 15 seconds
+setTimeout(() => {
+  barEl.style.width = '100%';
+  setTimeout(() => {
+    if (resultsData && resultsData.entities && resultsData.entities.length > 0) {
+      renderResults(resultsData);
+    } else {
+      renderNoResults();
+    }
+  }, 500);
+}, 15000);
+
+// Keep loadResults as no-op (results now shown via timeout above)
+function loadResults() {}
 
 function renderResults(data) {
   const { entities, total, address, city, state, holder } = data;
