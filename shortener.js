@@ -78,8 +78,9 @@ module.exports = function registerShortener(app, pool) {
       const code = generateCode();
       // Store URL in Redis
       await redisSet(`link:${code}`, url);
-      // Store contact metadata in Redis for click logging
-      await redisSet(`meta:${code}`, JSON.stringify({ phone, name, holder, amount, city, state }));
+      // Store contact metadata in Redis for click logging + OG image
+      const { imageUrl } = req.body;
+      await redisSet(`meta:${code}`, JSON.stringify({ phone, name, holder, amount, city, state, imageUrl: imageUrl || '' }));
       res.json({ code, short: `https://www.owedtoyou.net/c/${code}` });
     } catch (e) {
       console.error('Shorten error:', e);
@@ -111,7 +112,58 @@ module.exports = function registerShortener(app, pool) {
         }).catch(() => {});
       }
 
-      res.redirect(302, url); // 302 so click is logged each time
+      // Fetch metadata from Redis for OG image URL
+      let metaObj = {};
+      try {
+        const metaStr = await redisGet(`meta:${code}`);
+        if (metaStr) metaObj = JSON.parse(metaStr);
+      } catch(e) {}
+
+      // Decode the claim data from the URL for OG tags
+      let ogName = 'You', ogHolder = 'the state', ogAmount = '', ogImage = metaObj.imageUrl || '';
+      try {
+        const parsedUrl = new URL(url);
+        const d = parsedUrl.searchParams.get('d');
+        if (d) {
+          const padded = d + '=='.slice(0, (4 - d.length % 4) % 4);
+          const data = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+          ogName   = data.n || data.name || 'You';
+          ogHolder = data.h || data.holder || 'the state';
+          const amt = data.v || data.amount || data.t || 0;
+          ogAmount = amt ? `$${parseFloat(amt).toLocaleString('en-US', {minimumFractionDigits:2})}` : '';
+          // Use pre-generated image if available, otherwise skip
+          // meta is fetched below - placeholder, will be overwritten
+          ogImage = '';
+        }
+      } catch(e) {}
+
+      const title = ogAmount
+        ? `${ogName}, you're owed ${ogAmount} — OwedToYou.net`
+        : `${ogName}, you have unclaimed funds — OwedToYou.net`;
+      const desc = ogHolder && ogHolder !== 'the state'
+        ? `${ogHolder} is holding ${ogAmount || 'funds'} in your name. Claim it for $12.95.`
+        : `You have unclaimed funds waiting. Claim them for $12.95 — full refund if nothing recovered.`;
+
+      // Serve OG page — crawlers read meta tags, humans get JS redirect
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta property="og:title" content="${title.replace(/"/g, '&quot;')}">
+<meta property="og:description" content="${desc.replace(/"/g, '&quot;')}">
+<meta property="og:url" content="https://www.owedtoyou.net/c/${code}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwedToYou.net">
+${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}">
+<meta name="twitter:description" content="${desc.replace(/"/g, '&quot;')}">
+${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : ''}
+<meta http-equiv="refresh" content="0;url=${url}">
+<script>window.location.replace(${JSON.stringify(url)});</script>
+</head>
+<body></body>
+</html>`);
     } catch (e) {
       res.status(500).send('Error looking up link');
     }
