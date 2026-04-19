@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 const express = require("express");
 const dotenv = require("dotenv");
 const multer = require("multer");
@@ -134,6 +135,24 @@ app.use(express.json());
 // Shortener routes before static so GET /c/:code is never swallowed by express.static
 registerShortener(app, pool);
 registerSmsReply(app, pool);
+
+// MMS image hosting
+const MMS_DIR = path.join(__dirname, 'public', 'mms');
+if (!fs.existsSync(MMS_DIR)) fs.mkdirSync(MMS_DIR, { recursive: true });
+
+app.post('/upload-mms-image', (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'No image' });
+    const buf = Buffer.from(image, 'base64');
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+    fs.writeFileSync(path.join(MMS_DIR, filename), buf);
+    const url = `https://www.owedtoyou.net/mms/${filename}`;
+    res.json({ url });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 // ---------------------------------------------------------------------------
