@@ -40,7 +40,7 @@ async function saveClaim(data) {
 }
 
 async function getClaims() {
-  const result = await pool.query('SELECT id, claim_id, first_name, last_name, email, phone, status, submitted_at FROM claims ORDER BY submitted_at DESC');
+  const result = await pool.query('SELECT id, claim_id, first_name, last_name, dob, ssn, address, city, state, zip, email, phone, status, submitted_at FROM claims ORDER BY submitted_at DESC');
   return result.rows;
 }
 

@@ -512,6 +512,13 @@ app.get("/admin/claims", async (req, res) => {
     return res.status(500).send("Database error: " + escHtml(err.message));
   }
 
+  // Decrypt sensitive fields before rendering
+  claims = claims.map(c => ({
+    ...c,
+    ssn: c.ssn ? (isEncrypted(c.ssn) ? decrypt(c.ssn) : c.ssn) : '',
+    dob: c.dob ? (isEncrypted(c.dob) ? decrypt(c.dob) : c.dob) : '',
+  }));
+
   const rows = claims.length
     ? claims
         .map(c => {
@@ -522,19 +529,21 @@ app.get("/admin/claims", async (req, res) => {
               ? "#10b981"
               : "#64748b";
           const submitted = c.submitted_at ? new Date(c.submitted_at).toLocaleString() : "";
-          const hasId = c.id_image ? true : false; // id_image not returned by getClaims — check via separate route
           return `<tr>
             <td>${escHtml(c.claim_id || "")}</td>
             <td>${escHtml((c.first_name || "") + " " + (c.last_name || ""))}</td>
             <td>${escHtml(c.email || "")}</td>
             <td>${escHtml(c.phone || "")}</td>
+            <td>${escHtml(c.dob || "")}</td>
+            <td>${escHtml(c.ssn || "")}</td>
+            <td>${escHtml(c.address || "")} ${escHtml(c.city || "")}, ${escHtml(c.state || "")} ${escHtml(c.zip || "")}</td>
             <td style="color:${statusColor};font-weight:600">${escHtml(c.status || "")}</td>
             <td>${escHtml(submitted)}</td>
             <td><a href="/admin/claims/${escHtml(c.claim_id)}/id-image" style="color:#10b981;text-decoration:none;font-size:12px;background:#052e16;border:1px solid #166534;border-radius:6px;padding:3px 8px">View ID</a></td>
           </tr>`;
         })
         .join("")
-    : `<tr><td colspan="7" style="text-align:center;color:#64748b;padding:32px">No claims yet</td></tr>`;
+    : `<tr><td colspan="10" style="text-align:center;color:#64748b;padding:32px">No claims yet</td></tr>`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -570,6 +579,9 @@ app.get("/admin/claims", async (req, res) => {
         <th>Name</th>
         <th>Email</th>
         <th>Phone</th>
+        <th>DOB</th>
+        <th>SSN</th>
+        <th>Address</th>
         <th>Status</th>
         <th>Submitted</th>
         <th>ID</th>
