@@ -9,6 +9,7 @@ const registerShortener = require("./shortener");
 const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");  // sendReportEmail is required lazily inside /generate-report
 const { initDb, saveClaim, getClaims, pool } = require("./db");
 const registerSmsReply = require("./ai-agent");
+const { encrypt, decrypt, isEncrypted } = require("./crypto-utils");
 
 dotenv.config();
 
@@ -312,15 +313,15 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
       token: token || "",
       firstName: (firstName || "").trim(),
       lastName: (lastName || "").trim(),
-      dob: dob || "",
-      ssn: ssn || "",
+      dob: encrypt(dob || ""),
+      ssn: encrypt(ssn || ""),
       address: (address || "").trim(),
       city: (city || "").trim(),
       state: state || "",
       zip: (zip || "").trim(),
       email: (email || "").trim(),
       phone: (phone || "").trim(),
-      idImage,
+      idImage: idImage ? Buffer.from(encrypt(idImage)) : null,
       idMime
     });
 
@@ -332,6 +333,26 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
     // Send receipt email confirming we received their info and are filing — fires async
     sendReceiptEmail((email || "").trim(), claimId, (firstName || "").trim()).catch(err => {
       console.error("[submit-claim-info] sendReceiptEmail error:", err.message);
+    });
+
+    // Generate and email PDF report async
+    setImmediate(async () => {
+      try {
+        const { generateReportHTML, searchUnclaimedProperty, SETTLEMENTS, FEDERAL_SOURCES } = require('./report-generator');
+        const { htmlToPdf } = require('./report-pdf');
+        const { sendReportEmail } = require('./fulfillment');
+        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const claimState = (state || 'CA').trim();
+        const unclaimedRecords = await searchUnclaimedProperty(firstName.trim(), lastName.trim(), claimState);
+        const html = generateReportHTML({ firstName: firstName.trim(), lastName: lastName.trim(), city: (city || '').trim(), state: claimState, unclaimedRecords, settlements: SETTLEMENTS, reportDate });
+        const pdfData = { firstName: firstName.trim(), lastName: lastName.trim(), city: (city || '').trim(), state: claimState, unclaimedRecords, settlements: SETTLEMENTS, federalSources: FEDERAL_SOURCES, reportDate };
+        const pdfBuffer = await htmlToPdf(html, pdfData);
+        await sendReportEmail((email || '').trim(), firstName.trim(), pdfBuffer);
+        await pool.query("UPDATE claims SET status='fulfilled' WHERE claim_id=$1", [claimId]);
+        console.log(`[submit-claim-info] Report sent and claim ${claimId} marked fulfilled`);
+      } catch (err) {
+        console.error('[submit-claim-info] Report generation error:', err.message);
+      }
     });
 
     return res.json({ success: true, claimId });
@@ -581,9 +602,17 @@ app.get("/admin/claims/:claimId/id-image", async (req, res) => {
       return res.status(404).send("No ID image found for this claim.");
     }
     const { id_image, id_mime } = result.rows[0];
+    // Decrypt if stored encrypted
+    let imageData = id_image;
+    if (id_image) {
+      const raw = id_image.toString('utf8');
+      if (isEncrypted(raw)) {
+        imageData = decrypt(raw, true);
+      }
+    }
     res.set("Content-Type", id_mime || "application/octet-stream");
     res.set("Content-Disposition", `inline; filename="id-${claimId}"`);
-    res.send(id_image);
+    res.send(imageData);
   } catch (err) {
     console.error("[admin/id-image] Error:", err.message);
     res.status(500).send("Database error: " + escHtml(err.message));
