@@ -206,6 +206,11 @@ function basicAuthCheck(req, res) {
 // ---------------------------------------------------------------------------
 app.post("/create-checkout-session", async (req, res) => {
   try {
+    if (process.env.MAINTENANCE_MODE === 'true') {
+      return res.status(503).json({
+        error: "We're currently at capacity and not accepting new orders. Please check back soon."
+      });
+    }
     if (!stripe) {
       return res.status(500).json({
         error: "Stripe is not configured. Set STRIPE_SECRET_KEY."
