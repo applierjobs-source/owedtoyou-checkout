@@ -248,7 +248,29 @@ function renderNoResults() {
   `;
 }
 
-async function startCheckout(btn) {
+function showWaitlist(btn, amtFmt) {
+  const container = btn.parentElement;
+  container.innerHTML = `
+    <div style="background:#0f2a1a;border:1px solid #166534;border-radius:14px;padding:24px;text-align:center">
+      <div style="font-size:20px;font-weight:700;color:#10b981;margin-bottom:8px">We're at capacity</div>
+      <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;line-height:1.5">We're currently processing existing orders. Join the waitlist and we'll email you as soon as we reopen.</p>
+      <div style="display:flex;gap:8px;max-width:400px;margin:0 auto">
+        <input id="waitlist-email" type="email" placeholder="your@email.com" value="${email||''}" style="flex:1;background:#1e3a5f;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px;color:#fff;font-size:15px;outline:none" />
+        <button onclick="submitWaitlist()" style="background:#10b981;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap">Join</button>
+      </div>
+      <div id="waitlist-msg" style="margin-top:12px;font-size:13px;color:#10b981;display:none">You're on the list. We'll be in touch soon.</div>
+    </div>
+  `;
+}
+
+async function submitWaitlist() {
+  const emailVal = document.getElementById('waitlist-email').value.trim();
+  if (!emailVal) return;
+  await fetch('/waitlist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: emailVal, name: firstName }) });
+  document.getElementById('waitlist-msg').style.display = 'block';
+}
+
+async function startCheckout(btn, amtFmt) {
   btn.disabled = true;
   btn.textContent = 'Loading checkout...';
   gtag('event', 'begin_checkout', { currency: 'USD', value: 12.95 });
@@ -258,8 +280,10 @@ async function startCheckout(btn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: firstName, email })
     });
+    if (res.status === 503) { showWaitlist(btn, amtFmt); return; }
     const data = await res.json();
     if (data.url) window.location.href = data.url;
+    else { btn.disabled = false; btn.textContent = 'Try Again'; }
   } catch(e) {
     btn.disabled = false;
     btn.textContent = 'Try Again';

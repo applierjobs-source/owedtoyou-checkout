@@ -202,6 +202,25 @@ function basicAuthCheck(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// POST /waitlist
+app.post('/waitlist', async (req, res) => {
+  const { email, name } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    await pool.query(
+      `INSERT INTO waitlist (email, name, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (email) DO NOTHING`,
+      [email.trim().toLowerCase(), (name || '').trim()]
+    );
+    console.log(`[waitlist] ${email} joined`);
+    res.json({ success: true });
+  } catch (err) {
+    // Table may not exist yet — create it
+    await pool.query(`CREATE TABLE IF NOT EXISTS waitlist (id SERIAL PRIMARY KEY, email TEXT UNIQUE, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+    await pool.query(`INSERT INTO waitlist (email, name) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING`, [email.trim().toLowerCase(), (name || '').trim()]);
+    res.json({ success: true });
+  }
+});
+
 // POST /create-checkout-session
 // ---------------------------------------------------------------------------
 app.post("/create-checkout-session", async (req, res) => {
