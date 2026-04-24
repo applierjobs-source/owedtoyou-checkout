@@ -133,6 +133,10 @@ app.post(
 // ---------------------------------------------------------------------------
 app.use(express.json());
 
+// Clean URL redirects
+app.get('/privacy', (req, res) => res.redirect(301, '/privacy.html'));
+app.get('/terms', (req, res) => res.redirect(301, '/terms.html'));
+
 // Shortener routes before static so GET /c/:code is never swallowed by express.static
 registerShortener(app, pool);
 registerSmsReply(app, pool);
