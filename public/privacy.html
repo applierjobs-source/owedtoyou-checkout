@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Privacy Policy — OwedToYou.net</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.7}
+
+/* Header */
+.header{background:#0a1628;border-bottom:1px solid #1e3a5f;padding:0 24px}
+.header-inner{max-width:800px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-text{font-size:17px;font-weight:700;color:#fff}
+.back-link{font-size:13px;color:#64748b;text-decoration:none;display:flex;align-items:center;gap:5px;transition:color 0.15s}
+.back-link:hover{color:#10b981}
+
+/* Content */
+.page-wrap{max-width:800px;margin:0 auto;padding:48px 24px 80px}
+.page-title{font-size:32px;font-weight:800;color:#fff;margin-bottom:8px}
+.effective-date{font-size:13px;color:#64748b;margin-bottom:48px}
+
+h2{font-size:18px;font-weight:700;color:#fff;margin:36px 0 12px;padding-bottom:8px;border-bottom:1px solid #1e3a5f}
+h2:first-of-type{margin-top:0}
+
+p{font-size:15px;color:#cbd5e1;margin-bottom:14px}
+ul{margin:0 0 14px 20px;display:flex;flex-direction:column;gap:8px}
+li{font-size:15px;color:#cbd5e1}
+
+.highlight{color:#10b981;font-weight:600}
+.contact-block{background:#0a1628;border:1px solid #1e3a5f;border-radius:10px;padding:20px 24px;margin-top:12px}
+.contact-block a{color:#10b981;text-decoration:none}
+.contact-block a:hover{text-decoration:underline}
+
+/* Footer */
+.page-footer{text-align:center;padding:24px;font-size:12px;color:#334155;border-top:1px solid #1e3a5f;margin-top:64px}
+.page-footer a{color:#475569;text-decoration:none}
+.page-footer a:hover{color:#10b981}
+
+@media(max-width:600px){
+  .page-title{font-size:26px}
+  h2{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="OwedToYou.net logo">
+        <circle cx="14" cy="14" r="13" stroke="#10b981" stroke-width="2"/>
+        <text x="14" y="19" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700" font-family="system-ui">$</text>
+      </svg>
+      <span class="logo-text">OwedToYou.net</span>
+    </a>
+    <a href="/" class="back-link">← Back to Home</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <h1 class="page-title">Privacy Policy</h1>
+  <p class="effective-date">Effective Date: April 1, 2026</p>
+
+  <h2>Overview</h2>
+  <p>OwedToYou.net ("we," "us," or "our") is committed to protecting your personal information. This Privacy Policy describes what data we collect, how we use it, how we store and protect it, and your rights with respect to that data. By using our service, you agree to the practices described in this policy.</p>
+
+  <h2>Information We Collect</h2>
+  <p>To file unclaimed property claims on your behalf, we collect the following categories of personal information:</p>
+  <ul>
+    <li><strong>Identity information:</strong> Full legal name and date of birth</li>
+    <li><strong>Government identification:</strong> Social Security Number (SSN) and a government-issued photo ID (e.g., driver's license or passport)</li>
+    <li><strong>Contact information:</strong> Mailing address, email address, and phone number</li>
+    <li><strong>Payment information:</strong> Credit or debit card details (processed directly by Stripe — we do not store raw card data)</li>
+  </ul>
+  <p>We collect only the information necessary to perform the service you have requested. We do not collect data beyond what is required for claim research and filing assistance.</p>
+
+  <h2>How We Use Your Information</h2>
+  <p>We use your personal information solely for the following purposes:</p>
+  <ul>
+    <li>To search state and federal unclaimed property databases for funds held in your name</li>
+    <li>To prepare and file unclaimed property claim forms with applicable state agencies on your behalf</li>
+    <li>To verify your identity as required by state agencies</li>
+    <li>To communicate with you about your claim status via email and SMS</li>
+    <li>To process your one-time $12.95 service fee</li>
+    <li>To comply with applicable legal obligations</li>
+  </ul>
+  <p><span class="highlight">We never sell, rent, or trade your personal information</span> to third parties for marketing or any other purpose.</p>
+
+  <h2>How We Store and Protect Your Data</h2>
+  <p>We take the security of your sensitive information seriously:</p>
+  <ul>
+    <li><strong>Encryption at rest:</strong> All sensitive personal data (including SSNs and photo IDs) is encrypted using <span class="highlight">AES-256 encryption</span> before being stored in our database.</li>
+    <li><strong>Database:</strong> Encrypted data is stored in a PostgreSQL database hosted on Railway, a SOC 2-compliant infrastructure provider.</li>
+    <li><strong>Encryption in transit:</strong> All data transmitted between your browser and our servers uses TLS (HTTPS).</li>
+    <li><strong>Access controls:</strong> Access to sensitive data is restricted to authorized personnel only and logged for audit purposes.</li>
+    <li><strong>Payment security:</strong> Payment card data is handled exclusively by Stripe and is never stored on our servers. Stripe is PCI DSS Level 1 certified.</li>
+  </ul>
+
+  <h2>Third-Party Service Providers</h2>
+  <p>We share your data only with third parties necessary to deliver our service. These providers are bound by confidentiality obligations and are prohibited from using your data for any purpose other than providing services to us:</p>
+  <ul>
+    <li><strong>Stripe</strong> — Payment processing. Your payment card details are handled directly by Stripe. <a href="https://stripe.com/privacy" style="color:#10b981">stripe.com/privacy</a></li>
+    <li><strong>SendGrid (Twilio)</strong> — Email delivery for service communications and claim status updates.</li>
+    <li><strong>Twilio</strong> — SMS notifications regarding your claim status.</li>
+    <li><strong>State government portals</strong> — We submit your claim information directly to the applicable state unclaimed property agencies as necessary to file your claim.</li>
+    <li><strong>Railway</strong> — Cloud hosting and database infrastructure.</li>
+  </ul>
+  <p>We do not use your data for advertising, analytics profiling, or any purpose outside of delivering the unclaimed property claim service.</p>
+
+  <h2>Data Retention and Deletion</h2>
+  <p>We retain your personal information for as long as necessary to complete your claim and comply with applicable legal requirements. Specifically:</p>
+  <ul>
+    <li>We retain claim-related records for a minimum of <strong>3 years</strong> following claim submission to support any follow-up requirements from state agencies.</li>
+    <li>After the retention period expires, personal data is securely deleted from our systems.</li>
+    <li>You may request deletion of your data at any time by contacting us at <a href="mailto:contact@owedtoyou.net" style="color:#10b981">contact@owedtoyou.net</a>. We will process deletion requests within 30 days, subject to any legal obligations that require us to retain certain records.</li>
+    <li>Note that data transmitted to state agencies as part of your claim is governed by those agencies' own retention policies, which are outside our control.</li>
+  </ul>
+
+  <h2>Your Rights</h2>
+  <p>Depending on your jurisdiction, you may have the right to:</p>
+  <ul>
+    <li>Access the personal data we hold about you</li>
+    <li>Request correction of inaccurate data</li>
+    <li>Request deletion of your data (subject to legal retention requirements)</li>
+    <li>Withdraw consent for data processing where consent is the legal basis</li>
+  </ul>
+  <p>To exercise any of these rights, contact us using the information below.</p>
+
+  <h2>Cookies and Tracking</h2>
+  <p>Our website uses Google Analytics and Google Ads tracking technologies to understand site traffic and measure advertising effectiveness. These tools may use cookies or similar technologies. We do not use cookies to track you across unrelated third-party sites. You can opt out of Google Analytics by using the <a href="https://tools.google.com/dlpage/gaoptout" style="color:#10b981">Google Analytics Opt-out Browser Add-on</a>.</p>
+
+  <h2>Children's Privacy</h2>
+  <p>Our service is not directed to individuals under the age of 18. We do not knowingly collect personal information from minors. If you believe we have inadvertently collected information from a minor, please contact us immediately and we will delete it.</p>
+
+  <h2>Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on this page with a revised effective date. Continued use of our service after any changes constitutes acceptance of the revised policy.</p>
+
+  <h2>Contact Us</h2>
+  <p>If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:</p>
+  <div class="contact-block">
+    <p><strong>OwedToYou.net</strong><br>
+    Email: <a href="mailto:contact@owedtoyou.net">contact@owedtoyou.net</a></p>
+  </div>
+
+</div>
+
+<div class="page-footer">
+  &copy; 2026 OwedToYou.net &nbsp;·&nbsp;
+  <a href="/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="/terms.html">Terms of Service</a>
+</div>
+
+</body>
+</html>
