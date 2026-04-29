@@ -62,6 +62,14 @@
   gtag('js', new Date());
   gtag('config', 'G-4S7RB3FNTK');
 </script>
+<script>
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'].forEach(k => {
+    if (p.get(k)) sessionStorage.setItem(k, p.get(k));
+  });
+})();
+</script>
 </head>
 <body>
 

@@ -74,6 +74,15 @@ select.step-input option{background:#0f172a;color:#fff}
 <!-- Google Ads -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18094147730"></script>
 <script>gtag('config','AW-18094147730');</script>
+<script>
+// Capture UTM params and referral codes on landing and store in sessionStorage
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'].forEach(k => {
+    if (p.get(k)) sessionStorage.setItem(k, p.get(k));
+  });
+})();
+</script>
 </head>
 <body>
 

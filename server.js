@@ -259,7 +259,7 @@ app.post("/create-checkout-session", async (req, res) => {
     const baseUrl = resolveBaseUrl(req);
 
     // Extract optional metadata from request body (name, holder, amount)
-    const { name, holder, amount, email: bodyEmail } = req.body || {};
+    const { name, holder, amount, email: bodyEmail, source, utm_medium, utm_campaign, ref } = req.body || {};
 
     // Deduplicate: if this email already has a completed payment in the last 24 hours, block
     if (bodyEmail) {
@@ -291,6 +291,17 @@ app.post("/create-checkout-session", async (req, res) => {
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
+
+    // Save session to pending_payments with UTM data for tracking
+    if (bodyEmail) {
+      pool.query(
+        `INSERT INTO pending_payments (token, email, name, source, utm_medium, utm_campaign, ref)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (token) DO NOTHING`,
+        [session.id, bodyEmail.trim().toLowerCase(), (name||'').trim(),
+         (source||'').slice(0,100), (utm_medium||'').slice(0,100),
+         (utm_campaign||'').slice(0,100), (ref||'').slice(0,100)]
+      ).catch(err => console.error('[checkout] pending_payments insert error:', err.message));
+    }
 
     return res.json({ url: session.url });
   } catch (error) {

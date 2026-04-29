@@ -278,7 +278,12 @@ async function startCheckout(btn, amtFmt) {
     const res = await fetch('/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: firstName, email })
+      body: JSON.stringify({ name: firstName, email,
+        source: sessionStorage.getItem('utm_source') || '',
+        utm_medium: sessionStorage.getItem('utm_medium') || '',
+        utm_campaign: sessionStorage.getItem('utm_campaign') || '',
+        ref: sessionStorage.getItem('ref') || ''
+      })
     });
     if (res.status === 503) { showWaitlist(btn, amtFmt); return; }
     if (res.status === 409) {
