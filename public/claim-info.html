@@ -395,6 +395,33 @@
       .card-header { padding: 18px 20px; }
     }
   </style>
+<!-- Google Ads + GA4 conversion tracking -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18094147730"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-4S7RB3FNTK');
+  gtag('config', 'AW-18094147730');
+
+  // Fire purchase conversion on page load (user lands here after successful Stripe payment)
+  if (!sessionStorage.getItem('conversion_sent')) {
+    sessionStorage.setItem('conversion_sent', '1');
+    // GA4 purchase event
+    gtag('event', 'purchase', {
+      currency: 'USD', value: 12.95,
+      transaction_id: new URLSearchParams(window.location.search).get('token') || '',
+      items: [{ item_id: 'claim_processing_fee', item_name: 'Claim Processing Fee', price: 12.95, quantity: 1 }]
+    });
+    // Google Ads conversion event
+    gtag('event', 'conversion', {
+      send_to: 'AW-18094147730/purchase',
+      value: 12.95,
+      currency: 'USD',
+      transaction_id: new URLSearchParams(window.location.search).get('token') || ''
+    });
+  }
+</script>
 </head>
 <body>
 
