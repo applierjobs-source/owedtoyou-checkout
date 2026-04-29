@@ -259,7 +259,18 @@ app.post("/create-checkout-session", async (req, res) => {
     const baseUrl = resolveBaseUrl(req);
 
     // Extract optional metadata from request body (name, holder, amount)
-    const { name, holder, amount } = req.body || {};
+    const { name, holder, amount, email: bodyEmail } = req.body || {};
+
+    // Deduplicate: if this email already has a completed payment in the last 24 hours, block
+    if (bodyEmail) {
+      const recent = await pool.query(
+        `SELECT id FROM pending_payments WHERE email=$1 AND completed=true AND created_at > NOW() - INTERVAL '24 hours' LIMIT 1`,
+        [bodyEmail.trim().toLowerCase()]
+      );
+      if (recent.rows.length > 0) {
+        return res.status(409).json({ error: 'A completed order already exists for this email address.' });
+      }
+    }
     const metadata = {};
     if (name) metadata.name = String(name).slice(0, 500);
     if (holder) metadata.holder = String(holder).slice(0, 500);

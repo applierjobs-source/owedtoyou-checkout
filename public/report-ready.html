@@ -281,6 +281,13 @@ async function startCheckout(btn, amtFmt) {
       body: JSON.stringify({ name: firstName, email })
     });
     if (res.status === 503) { showWaitlist(btn, amtFmt); return; }
+    if (res.status === 409) {
+      btn.disabled = false;
+      btn.textContent = 'Already Purchased';
+      btn.style.background = '#334155';
+      btn.style.cursor = 'default';
+      return;
+    }
     const data = await res.json();
     if (data.url) window.location.href = data.url;
     else { btn.disabled = false; btn.textContent = 'Try Again'; }
