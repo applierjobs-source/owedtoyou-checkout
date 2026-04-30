@@ -416,24 +416,38 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 // GET /search-unclaimed — look up unclaimed property by name in CA database
 // ---------------------------------------------------------------------------
 app.get("/search-unclaimed", async (req, res) => {
-  const { name, lastName, email } = req.query;
+  const { name, lastName, email, state: userState } = req.query;
   if (!name) return res.json({ entities: [], total: 0 });
 
   try {
     const firstName = name.trim().toUpperCase();
     const lastNameUpper = lastName ? lastName.trim().toUpperCase() : null;
+    const stateFilter = userState ? userState.trim().toUpperCase() : null;
 
-    // Search by first name + last name if available, otherwise just first name
-    // Try Postgres first, fall back to external search API
+    // Search by first name + last name + state if available
     let rows = [];
     try {
-      const result = await pool.query(
-        lastNameUpper
-          ? `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`
-          : `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 ORDER BY amount DESC LIMIT 20`,
-        lastNameUpper ? [firstName, lastNameUpper] : [firstName]
-      );
+      let query, params;
+      if (lastNameUpper && stateFilter) {
+        query = `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 AND UPPER(state)=$3 ORDER BY amount DESC LIMIT 20`;
+        params = [firstName, lastNameUpper, stateFilter];
+      } else if (lastNameUpper) {
+        query = `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`;
+        params = [firstName, lastNameUpper];
+      } else {
+        query = `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 ORDER BY amount DESC LIMIT 20`;
+        params = [firstName];
+      }
+      const result = await pool.query(query, params);
       rows = result.rows;
+      // If no results for their specific state, fall back to all states
+      if (rows.length === 0 && stateFilter && lastNameUpper) {
+        const fallback = await pool.query(
+          `SELECT holder, amount, address, city, state FROM ca_unclaimed WHERE UPPER(first_name)=$1 AND UPPER(last_name)=$2 ORDER BY amount DESC LIMIT 20`,
+          [firstName, lastNameUpper]
+        );
+        rows = fallback.rows;
+      }
     } catch(e) { rows = []; }
 
     // If Postgres has no data yet, try our pipeline search API

@@ -90,6 +90,7 @@ const params = new URLSearchParams(window.location.search);
 const firstName = params.get('name') || 'there';
 const lastName = params.get('lastName') || '';
 const email = params.get('email') || '';
+const userState = params.get('state') || '';
 
 // Scan steps shown during 15-second animation
 const SCAN_STEPS = [
@@ -115,7 +116,8 @@ let resultsData = null;
 // Fetch in background immediately
 fetch('/search-unclaimed?name=' + encodeURIComponent(firstName) +
       '&lastName=' + encodeURIComponent(lastName) +
-      '&email=' + encodeURIComponent(email))
+      '&email=' + encodeURIComponent(email) +
+      '&state=' + encodeURIComponent(userState))
   .then(r => r.json()).then(d => { resultsData = d; }).catch(() => { resultsData = { entities: [], total: 0 }; });
 
 // Show steps over 15 seconds
