@@ -121,8 +121,8 @@ fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
   .then(d => { resultsData = d; })
   .catch(() => { resultsData = { found: false, entities: [], total: 0 }; });
 
-// Show steps over 20 seconds (ZenRows + MissingMoney takes ~12-15s)
-const stepDelay = 18000 / SCAN_STEPS.length;
+// Show steps over 25 seconds (state portal via ZenRows takes ~15-17s)
+const stepDelay = 23000 / SCAN_STEPS.length;
 SCAN_STEPS.forEach((label, i) => {
   setTimeout(() => {
     const div = document.createElement('div');
@@ -143,13 +143,13 @@ setTimeout(() => {
       renderNoResults();
     }
   }, 500);
-}, 20000);
+}, 25000);
 
 // Keep loadResults as no-op (results now shown via timeout above)
 function loadResults() {}
 
 function renderResults(data) {
-  const { entities, total } = data;
+  const { entities, total, count } = data;
   const card = document.getElementById('card');
 
   if (!entities || entities.length === 0) {
@@ -184,11 +184,7 @@ function renderResults(data) {
         <div class="emoji">💰</div>
       </div>
       <div>
-        <div class="field-label">Property address on file</div>
-        <div class="field-value light">${address}, ${city}, ${state}</div>
-      </div>
-      <div>
-        <div class="field-label">Unclaimed property records</div>
+        <div class="field-label">Top unclaimed property records${count > 10 ? ` (${count} total found)` : ''}</div>
         <div class="entities-table">
           <div class="entities-header"><span>Held By</span><span>Amount</span></div>
           ${entitiesHtml}

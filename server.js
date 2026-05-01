@@ -506,15 +506,17 @@ app.get("/search-missingmoney", async (req, res) => {
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
     if (properties.length === 0) return res.json({ found: false, entities: [], total: 0 });
 
-    const entities = properties.map(p => ({
+    const allEntities = properties.map(p => ({
       name:     (p.holderName || 'State Treasury').slice(0, 60),
       amount:   parseFloat(p.propertyValue) || 0,
       amtLabel: p.propertyValue ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Undisclosed',
       type:     p.propertyTypeDescription || '',
     }));
 
-    const total = entities.reduce((s, e) => s + e.amount, 0);
-    return res.json({ found: true, entities, total });
+    // Sort by value descending, take top 10
+    const entities = allEntities.sort((a, b) => b.amount - a.amount).slice(0, 10);
+    const total = allEntities.reduce((s, e) => s + e.amount, 0);
+    return res.json({ found: true, entities, total, count: allEntities.length });
 
   } catch (err) {
     console.error('[search-missingmoney] Error:', err.message);
