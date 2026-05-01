@@ -410,108 +410,111 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-// GET /search-missingmoney — real-time lookup via MissingMoney.com using ZenRows
-// Returns { entities: [{name, amount}], total, found: bool }
+// GET /search-missingmoney — searches the user's state portal via ZenRows
+// Intercepts the JSON API response the Angular app makes after Turnstile solve
+// Returns { entities: [{name, amount, amtLabel}], total, found: bool }
 // ---------------------------------------------------------------------------
+
+// State portal search URLs and their internal API endpoints
+const STATE_SEARCH_CONFIG = {
+  TX: { url: 'https://www.claimittexas.gov/app/claim-search', apiPattern: '/SWS/properties' },
+  CA: { url: 'https://claimit.ca.gov/app/claim-search',       apiPattern: '/SWS/properties' },
+  FL: { url: 'https://www.fltreasurehunt.gov/ClaimSearch',    apiPattern: null }, // React, scrape DOM
+  PA: { url: 'https://unclaimedproperty.patreasury.gov/en/Property/SearchIndex', apiPattern: null },
+  OH: { url: 'https://unclaimedfunds.ohio.gov/app/claim-search',       apiPattern: '/SWS/properties' },
+  CT: { url: 'https://ctbiglist.gov/app/claim-search',                  apiPattern: '/SWS/properties' },
+  OR: { url: 'https://unclaimed.oregon.gov/app/claim-search',           apiPattern: '/SWS/properties' },
+  MN: { url: 'https://minnesota.findyourunclaimedproperty.com/app/claim-search', apiPattern: '/SWS/properties' },
+  DE: { url: 'https://unclaimedproperty.delaware.gov/app/claim-search', apiPattern: '/SWS/properties' },
+  NC: { url: 'https://www.nccash.gov/app/claim-search',                 apiPattern: '/SWS/properties' },
+  IN: { url: 'https://www.indianaunclaimed.gov/app/claim-search',       apiPattern: '/SWS/properties' },
+  IL: { url: 'https://icash.illinoistreasurer.gov/app/claim-search',    apiPattern: '/SWS/properties' },
+  UT: { url: 'https://unclaimedproperty.utah.gov/app/claim-search',     apiPattern: '/SWS/properties' },
+  WA: { url: 'https://ucp.dor.wa.gov/app/claim-search',                 apiPattern: '/SWS/properties' },
+  CO: { url: 'https://colorado.findyourunclaimedproperty.com/app/claim-search', apiPattern: '/SWS/properties' },
+  AZ: { url: 'https://azdor.gov/app/claim-search',                      apiPattern: '/SWS/properties' },
+  GA: { url: 'https://georgia.findyourunclaimedproperty.com/app/claim-search', apiPattern: '/SWS/properties' },
+  MO: { url: 'https://missouriunclaimed.com/app/claim-search',          apiPattern: '/SWS/properties' },
+  VA: { url: 'https://vamoneysearch.gov/app/claim-search',              apiPattern: '/SWS/properties' },
+  NY: { url: 'https://ouf.osc.ny.gov/app/claim-search',                 apiPattern: '/SWS/properties' },
+  NJ: { url: 'https://www.unclaimedproperty.nj.gov/app/claim-search',   apiPattern: '/SWS/properties' },
+  WI: { url: 'https://www.statetreasury.wisconsin.gov/app/claim-search', apiPattern: '/SWS/properties' },
+  MI: { url: 'https://michigan.findyourunclaimedproperty.com/app/claim-search', apiPattern: '/SWS/properties' },
+  MA: { url: 'https://www.unclaimedproperty.mass.gov/app/claim-search', apiPattern: '/SWS/properties' },
+};
+
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
+
+  const state = (userState || 'TX').trim().toUpperCase();
+  const config = STATE_SEARCH_CONFIG[state] || STATE_SEARCH_CONFIG['TX'];
 
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
   const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}`;
 
   let browser;
   try {
-    const { chromium } = require('playwright');
+    const { chromium } = require('playwright-core');
     browser = await chromium.connectOverCDP(WSS);
-    const context = browser.contexts[0] || await browser.newContext();
+    const context = browser.contexts()[0] || await browser.newContext();
     const page = await context.newPage();
 
-    await page.goto('https://missingmoney.com', { timeout: 60000, waitUntil: 'domcontentloaded' });
+    // Intercept the JSON API response the Angular app fires after Turnstile solve
+    let apiData = null;
+    page.on('response', async (resp) => {
+      try {
+        const url = resp.url();
+        const ct = resp.headers()['content-type'] || '';
+        if (config.apiPattern && url.includes(config.apiPattern) && ct.includes('json')) {
+          const body = await resp.json().catch(() => null);
+          if (body && (body.properties || Array.isArray(body))) {
+            apiData = body;
+          }
+        }
+      } catch { /* */ }
+    });
+
+    await page.goto(config.url, { timeout: 60000, waitUntil: 'domcontentloaded' });
     await new Promise(r => setTimeout(r, 4000));
 
-    // Fill search form
-    const fillField = async (sel, val) => {
-      try { const el = await page.$(sel); if (el) { await el.fill(''); await el.type(val, { delay: 30 }); return true; } } catch { /* */ }
+    // Fill search fields
+    const tryFill = async (sel, val) => {
+      try { const el = await page.$(sel); if (el) { await el.fill(''); await el.type(val, { delay: 30 }); return true; } } catch { }
       return false;
     };
-    await fillField('#lastNameTop, input[name*="lastName"]', lastName.trim());
-    await fillField('#firstNameTop, input[name*="firstName"]', firstName.trim());
-    // Select their state if dropdown exists
-    if (userState) {
-      try { await page.selectOption('select[name*="state"], select[id*="state"], #stateTop', userState.trim().toUpperCase()); } catch { /* search all */ }
+    await tryFill('input[name*="lastName"], #lastName, [placeholder*="Last"]', lastName.trim());
+    await tryFill('input[name*="firstName"], #firstName, [placeholder*="First"]', firstName.trim());
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Submit — ZenRows auto-solves Turnstile
+    try { await page.click('button[type=submit], input[type=submit], button:has-text("SEARCH")', { timeout: 5000 }); }
+    catch { await page.keyboard.press('Enter'); }
+
+    // Wait for Turnstile solve + API response (up to 20s)
+    const deadline = Date.now() + 20000;
+    while (!apiData && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500));
     }
-    await page.keyboard.press('Enter');
-    await new Promise(r => setTimeout(r, 6000));
-
-    // Parse results — MissingMoney uses range amounts like "$25 TO $50" or "OVER $100"
-    const results = await page.evaluate((ln) => {
-      const entities = [];
-
-      // Convert MM amount range string to a numeric midpoint
-      function parseMMAmount(str) {
-        if (!str) return 0;
-        str = str.toUpperCase().trim();
-        // "OVER $X" -> use X as floor
-        const overMatch = str.match(/OVER\s+\$([\d,]+)/);
-        if (overMatch) return parseFloat(overMatch[1].replace(/,/g,'')) * 1.5;
-        // "$X TO $Y" -> midpoint
-        const rangeMatch = str.match(/\$([\d,]+)\s+TO\s+\$([\d,]+)/);
-        if (rangeMatch) {
-          const lo = parseFloat(rangeMatch[1].replace(/,/g,''));
-          const hi = parseFloat(rangeMatch[2].replace(/,/g,''));
-          return (lo + hi) / 2;
-        }
-        // Exact "$X" or "$X.XX"
-        const exactMatch = str.match(/\$([\d,]+\.?\d{0,2})/);
-        if (exactMatch) return parseFloat(exactMatch[1].replace(/,/g,''));
-        return 0;
-      }
-
-      // Each result row in MM table has tds: [CLAIM btn, Owner, Co-owner, Business, Address, City, State, Zip, HeldIn, Amount]
-      document.querySelectorAll('table tr').forEach(row => {
-        const cells = Array.from(row.querySelectorAll('td'));
-        if (cells.length < 5) return;
-        const rowText = row.innerText || '';
-        if (!rowText.toUpperCase().includes(ln.toUpperCase())) return;
-
-        // Amount is last cell
-        const amtText = cells[cells.length - 1]?.innerText?.trim() || '';
-        const amount = parseMMAmount(amtText);
-        if (!amount) return;
-
-        // Business name is typically 4th cell (index 3)
-        let holder = cells[3]?.innerText?.trim() || '';
-        // If blank/undisclosed, try address city
-        if (!holder || holder === 'NOT DISCLOSED' || holder === 'UNDISCLOSED') {
-          holder = cells[5]?.innerText?.trim() || 'State Treasury';
-        }
-
-        // Raw amount label for display
-        const amtLabel = amtText || `$${amount}`;
-        entities.push({ name: holder.slice(0, 60), amount, amtLabel });
-      });
-      return entities;
-    }, lastName.trim());
 
     await page.close();
     await browser.close();
 
-    if (results.length === 0) {
-      return res.json({ found: false, entities: [], total: 0 });
-    }
+    if (!apiData) return res.json({ found: false, entities: [], total: 0 });
 
-    // Deduplicate and sum
-    const seen = new Set();
-    const deduped = results.filter(e => {
-      const key = `${e.name}|${e.amount}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    const total = deduped.reduce((s, e) => s + e.amount, 0);
+    // Parse the NAUPA SWS JSON response
+    const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
+    if (properties.length === 0) return res.json({ found: false, entities: [], total: 0 });
 
-    return res.json({ found: true, entities: deduped, total });
+    const entities = properties.map(p => ({
+      name:     (p.holderName || 'State Treasury').slice(0, 60),
+      amount:   parseFloat(p.propertyValue) || 0,
+      amtLabel: p.propertyValue ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Undisclosed',
+      type:     p.propertyTypeDescription || '',
+    }));
+
+    const total = entities.reduce((s, e) => s + e.amount, 0);
+    return res.json({ found: true, entities, total });
 
   } catch (err) {
     console.error('[search-missingmoney] Error:', err.message);
