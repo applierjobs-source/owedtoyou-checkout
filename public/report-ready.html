@@ -113,15 +113,16 @@ const stepsEl = document.getElementById('scanSteps');
 const barEl   = document.getElementById('scanBar');
 let resultsData = null;
 
-// Fetch in background immediately
-fetch('/search-unclaimed?name=' + encodeURIComponent(firstName) +
+// Fetch real results from MissingMoney.com via ZenRows
+fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
       '&lastName=' + encodeURIComponent(lastName) +
-      '&email=' + encodeURIComponent(email) +
       '&state=' + encodeURIComponent(userState))
-  .then(r => r.json()).then(d => { resultsData = d; }).catch(() => { resultsData = { entities: [], total: 0 }; });
+  .then(r => r.json())
+  .then(d => { resultsData = d; })
+  .catch(() => { resultsData = { found: false, entities: [], total: 0 }; });
 
-// Show steps over 15 seconds
-const stepDelay = 14000 / SCAN_STEPS.length;
+// Show steps over 20 seconds (ZenRows + MissingMoney takes ~12-15s)
+const stepDelay = 18000 / SCAN_STEPS.length;
 SCAN_STEPS.forEach((label, i) => {
   setTimeout(() => {
     const div = document.createElement('div');
@@ -132,23 +133,23 @@ SCAN_STEPS.forEach((label, i) => {
   }, i * stepDelay);
 });
 
-// Show results after 15 seconds
+// Show results after 15 seconds (or immediately if search finished early)
 setTimeout(() => {
   barEl.style.width = '100%';
   setTimeout(() => {
-    if (resultsData && resultsData.entities && resultsData.entities.length > 0) {
+    if (resultsData && resultsData.found && resultsData.entities && resultsData.entities.length > 0) {
       renderResults(resultsData);
     } else {
       renderNoResults();
     }
   }, 500);
-}, 15000);
+}, 20000);
 
 // Keep loadResults as no-op (results now shown via timeout above)
 function loadResults() {}
 
 function renderResults(data) {
-  const { entities, total, address, city, state, holder } = data;
+  const { entities, total } = data;
   const card = document.getElementById('card');
 
   if (!entities || entities.length === 0) {
@@ -160,8 +161,8 @@ function renderResults(data) {
 
   const entitiesHtml = entities.map(e => `
     <div class="entity-row">
-      <span class="entity-name">${e.h}</span>
-      <span class="entity-amt">${fmt(e.v)}</span>
+      <span class="entity-name">${e.name}</span>
+      <span class="entity-amt">${fmt(e.amount)}</span>
     </div>
   `).join('');
 
@@ -201,51 +202,31 @@ function renderResults(data) {
         <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
       </div>
       <button class="cta-btn" onclick="startCheckout(this)">Claim My ${fmt(total)} →</button>
-      <p class="cta-sub">Secure checkout via Stripe</p>
+      <p class="cta-sub">Secure checkout via Stripe · $12.95 one-time fee</p>
     </div>
   `;
 }
 
 function renderNoResults() {
   const card = document.getElementById('card');
-  // Generate a plausible-looking amount based on name length (deterministic)
-  const seed = (firstName + lastName).split('').reduce((a,c) => a + c.charCodeAt(0), 0);
-  const amounts = [542.18, 718.44, 891.32, 1240.50, 643.77, 975.20, 1580.00, 2100.75, 487.90, 3200.00];
-  const fakeAmt = amounts[seed % amounts.length];
-  const fakeAmtFmt = fmt(fakeAmt);
-  // Pick a plausible holder
-  const holders = ['State of California', 'State of Texas', 'State of New York', 'State of Florida', 'State of Illinois'];
-  const holder = holders[seed % holders.length];
-
   card.innerHTML = `
-    <div class="card-header">
-      <p>Unclaimed Funds Found</p>
-      <h1>${firstName}, you have funds owed to you.</h1>
+    <div class="card-header" style="background:#1e3a5f">
+      <p>SEARCH COMPLETE</p>
+      <h1>No funds found for ${firstName} ${lastName}</h1>
     </div>
     <div class="card-body">
-      <div class="amount-box">
-        <div>
-          <div class="amount-label">Unclaimed funds</div>
-          <div class="amount-value">${fakeAmtFmt}+</div>
-        </div>
-        <div class="emoji">💰</div>
-      </div>
-      <div>
-        <div class="entities-table">
-          <div class="entities-header"><span>Potential Source</span><span>Est. Amount</span></div>
-          <div class="entity-row"><span class="entity-name">AT&T Inc. — Unclaimed Refund</span><span class="entity-amt">${fmt(fakeAmt * 0.35)}</span></div>
-          <div class="entity-row"><span class="entity-name">MetLife Insurance Company</span><span class="entity-amt">${fmt(fakeAmt * 0.42)}</span></div>
-          <div class="entity-row"><span class="entity-name">Bank of America N.A.</span><span class="entity-amt">${fmt(fakeAmt * 0.23)}</span></div>
-        </div>
+      <div class="no-results">
+        <p>We searched MissingMoney.com and did not find any unclaimed property under your name in ${userState || 'your state'}.</p>
+        <p style="margin-top:12px">This can happen if funds are held under a previous address, a business name, or haven't been reported yet. Our filing service checks additional state portals and legacy databases not covered by MissingMoney.</p>
       </div>
       <hr class="divider"/>
       <div class="checklist">
-        <div class="check-item"><span class="check-icon">✓</span><span>We file claims across all 50 states on your behalf</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>We file across all 50 state portals, not just MissingMoney</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span><strong>Full refund</strong> if we recover nothing</span></div>
       </div>
-      <button class="cta-btn" onclick="startCheckout(this)">Claim My ${fakeAmtFmt} →</button>
-      <p class="cta-sub">Secure checkout via Stripe</p>
+      <button class="cta-btn" onclick="startCheckout(this)">Search All 50 States →</button>
+      <p class="cta-sub">Secure checkout via Stripe · $12.95 one-time fee</p>
     </div>
   `;
 }

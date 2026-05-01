@@ -409,6 +409,98 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /search-missingmoney — real-time lookup via MissingMoney.com using ZenRows
+// Returns { entities: [{name, amount}], total, found: bool }
+// ---------------------------------------------------------------------------
+app.get("/search-missingmoney", async (req, res) => {
+  const { firstName, lastName, state: userState } = req.query;
+  if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
+
+  const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
+  const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}`;
+
+  let browser;
+  try {
+    const { chromium } = require('playwright');
+    browser = await chromium.connectOverCDP(WSS);
+    const context = browser.contexts[0] || await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto('https://missingmoney.com', { timeout: 60000, waitUntil: 'domcontentloaded' });
+    await new Promise(r => setTimeout(r, 4000));
+
+    // Fill search form
+    const fillField = async (sel, val) => {
+      try { const el = await page.$(sel); if (el) { await el.fill(''); await el.type(val, { delay: 30 }); return true; } } catch { /* */ }
+      return false;
+    };
+    await fillField('#lastNameTop, input[name*="lastName"]', lastName.trim());
+    await fillField('#firstNameTop, input[name*="firstName"]', firstName.trim());
+    // Select their state if dropdown exists
+    if (userState) {
+      try { await page.selectOption('select[name*="state"], select[id*="state"], #stateTop', userState.trim().toUpperCase()); } catch { /* search all */ }
+    }
+    await page.keyboard.press('Enter');
+    await new Promise(r => setTimeout(r, 6000));
+
+    // Parse results — MissingMoney shows property holder + amount per row
+    const results = await page.evaluate((ln) => {
+      const entities = [];
+      // Try table rows first
+      document.querySelectorAll('tr, [class*="result"], [class*="property"]').forEach(row => {
+        const text = row.innerText || '';
+        if (!text.toUpperCase().includes(ln.toUpperCase())) return;
+        // Extract dollar amount
+        const amtMatch = text.match(/\$([\d,]+\.?\d{0,2})/);
+        if (!amtMatch) return;
+        const amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+        if (!amount || amount <= 0) return;
+        // Extract holder name — first non-name, non-amount cell
+        const cells = row.querySelectorAll('td, [class*="col"], [class*="cell"]');
+        let holder = '';
+        cells.forEach(c => {
+          const t = (c.innerText || '').trim();
+          if (t && !t.match(/^\$/) && !t.toUpperCase().includes(ln.toUpperCase()) && t.length > 2 && !holder) {
+            holder = t.split('\n')[0].trim();
+          }
+        });
+        if (!holder) {
+          // fallback: grab first substantive text segment before the amount
+          const parts = text.split('\n').map(s => s.trim()).filter(Boolean);
+          holder = parts.find(p => !p.match(/^\$/) && !p.toUpperCase().includes(ln.toUpperCase())) || 'State Treasury';
+        }
+        entities.push({ name: holder.slice(0, 60), amount });
+      });
+      return entities;
+    }, lastName.trim());
+
+    await page.close();
+    await browser.close();
+
+    if (results.length === 0) {
+      return res.json({ found: false, entities: [], total: 0 });
+    }
+
+    // Deduplicate and sum
+    const seen = new Set();
+    const deduped = results.filter(e => {
+      const key = `${e.name}|${e.amount}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const total = deduped.reduce((s, e) => s + e.amount, 0);
+
+    return res.json({ found: true, entities: deduped, total });
+
+  } catch (err) {
+    console.error('[search-missingmoney] Error:', err.message);
+    if (browser) try { await browser.close(); } catch { /* */ }
+    return res.json({ found: false, entities: [], total: 0, error: err.message.slice(0, 80) });
+  }
+});
+
 // GET /search-unclaimed — look up unclaimed property by name in CA database
 // ---------------------------------------------------------------------------
 app.get("/search-unclaimed", async (req, res) => {
