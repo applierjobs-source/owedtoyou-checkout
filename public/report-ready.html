@@ -162,7 +162,7 @@ function renderResults(data) {
   const entitiesHtml = entities.map(e => `
     <div class="entity-row">
       <span class="entity-name">${e.name}</span>
-      <span class="entity-amt">${fmt(e.amount)}</span>
+      <span class="entity-amt">${e.amtLabel || fmt(e.amount)}</span>
     </div>
   `).join('');
 
@@ -178,8 +178,8 @@ function renderResults(data) {
     <div class="card-body">
       <div class="amount-box">
         <div>
-          <div class="amount-label">Total amount owed</div>
-          <div class="amount-value">${fmt(total)}</div>
+          <div class="amount-label">Estimated amount owed</div>
+          <div class="amount-value">${fmt(total)}+</div>
         </div>
         <div class="emoji">💰</div>
       </div>

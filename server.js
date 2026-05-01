@@ -444,33 +444,52 @@ app.get("/search-missingmoney", async (req, res) => {
     await page.keyboard.press('Enter');
     await new Promise(r => setTimeout(r, 6000));
 
-    // Parse results — MissingMoney shows property holder + amount per row
+    // Parse results — MissingMoney uses range amounts like "$25 TO $50" or "OVER $100"
     const results = await page.evaluate((ln) => {
       const entities = [];
-      // Try table rows first
-      document.querySelectorAll('tr, [class*="result"], [class*="property"]').forEach(row => {
-        const text = row.innerText || '';
-        if (!text.toUpperCase().includes(ln.toUpperCase())) return;
-        // Extract dollar amount
-        const amtMatch = text.match(/\$([\d,]+\.?\d{0,2})/);
-        if (!amtMatch) return;
-        const amount = parseFloat(amtMatch[1].replace(/,/g, ''));
-        if (!amount || amount <= 0) return;
-        // Extract holder name — first non-name, non-amount cell
-        const cells = row.querySelectorAll('td, [class*="col"], [class*="cell"]');
-        let holder = '';
-        cells.forEach(c => {
-          const t = (c.innerText || '').trim();
-          if (t && !t.match(/^\$/) && !t.toUpperCase().includes(ln.toUpperCase()) && t.length > 2 && !holder) {
-            holder = t.split('\n')[0].trim();
-          }
-        });
-        if (!holder) {
-          // fallback: grab first substantive text segment before the amount
-          const parts = text.split('\n').map(s => s.trim()).filter(Boolean);
-          holder = parts.find(p => !p.match(/^\$/) && !p.toUpperCase().includes(ln.toUpperCase())) || 'State Treasury';
+
+      // Convert MM amount range string to a numeric midpoint
+      function parseMMAmount(str) {
+        if (!str) return 0;
+        str = str.toUpperCase().trim();
+        // "OVER $X" -> use X as floor
+        const overMatch = str.match(/OVER\s+\$([\d,]+)/);
+        if (overMatch) return parseFloat(overMatch[1].replace(/,/g,'')) * 1.5;
+        // "$X TO $Y" -> midpoint
+        const rangeMatch = str.match(/\$([\d,]+)\s+TO\s+\$([\d,]+)/);
+        if (rangeMatch) {
+          const lo = parseFloat(rangeMatch[1].replace(/,/g,''));
+          const hi = parseFloat(rangeMatch[2].replace(/,/g,''));
+          return (lo + hi) / 2;
         }
-        entities.push({ name: holder.slice(0, 60), amount });
+        // Exact "$X" or "$X.XX"
+        const exactMatch = str.match(/\$([\d,]+\.?\d{0,2})/);
+        if (exactMatch) return parseFloat(exactMatch[1].replace(/,/g,''));
+        return 0;
+      }
+
+      // Each result row in MM table has tds: [CLAIM btn, Owner, Co-owner, Business, Address, City, State, Zip, HeldIn, Amount]
+      document.querySelectorAll('table tr').forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        if (cells.length < 5) return;
+        const rowText = row.innerText || '';
+        if (!rowText.toUpperCase().includes(ln.toUpperCase())) return;
+
+        // Amount is last cell
+        const amtText = cells[cells.length - 1]?.innerText?.trim() || '';
+        const amount = parseMMAmount(amtText);
+        if (!amount) return;
+
+        // Business name is typically 4th cell (index 3)
+        let holder = cells[3]?.innerText?.trim() || '';
+        // If blank/undisclosed, try address city
+        if (!holder || holder === 'NOT DISCLOSED' || holder === 'UNDISCLOSED') {
+          holder = cells[5]?.innerText?.trim() || 'State Treasury';
+        }
+
+        // Raw amount label for display
+        const amtLabel = amtText || `$${amount}`;
+        entities.push({ name: holder.slice(0, 60), amount, amtLabel });
       });
       return entities;
     }, lastName.trim());
