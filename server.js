@@ -506,17 +506,20 @@ app.get("/search-missingmoney", async (req, res) => {
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
     if (properties.length === 0) return res.json({ found: false, entities: [], total: 0 });
 
-    const allEntities = properties.map(p => ({
-      name:     (p.holderName || 'State Treasury').slice(0, 60),
-      amount:   parseFloat(p.propertyValue) || 0,
-      amtLabel: p.propertyValue ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Undisclosed',
-      type:     p.propertyTypeDescription || '',
+    // Return page 1 exactly as the portal shows it — no reordering, no filtering
+    const entities = properties.slice(0, 20).map(p => ({
+      ownerName: (p.ownerName || '').trim(),
+      name:      (p.holderName || 'State Treasury').slice(0, 60),
+      city:      (p.city || '').trim(),
+      state:     (p.state || '').trim(),
+      amtLabel:  p.propertyValue != null
+                   ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                   : 'Undisclosed',
+      amount:    parseFloat(p.propertyValue) || 0,
     }));
 
-    // Sort by value descending, take top 10
-    const entities = allEntities.sort((a, b) => b.amount - a.amount).slice(0, 10);
-    const total = allEntities.reduce((s, e) => s + e.amount, 0);
-    return res.json({ found: true, entities, total, count: allEntities.length });
+    const total = properties.reduce((s, p) => s + (parseFloat(p.propertyValue) || 0), 0);
+    return res.json({ found: true, entities, total, count: properties.length });
 
   } catch (err) {
     console.error('[search-missingmoney] Error:', err.message);
