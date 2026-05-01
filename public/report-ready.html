@@ -178,13 +178,14 @@ function renderResults(data) {
     <div class="card-body">
       <div class="amount-box">
         <div>
-          <div class="amount-label">Estimated amount owed</div>
-          <div class="amount-value">${fmt(total)}+</div>
+          <div class="amount-label">${count > 10 ? count + ' properties found for ' + firstName + ' ' + lastName + ' in ' + userState : 'Total amount owed'}</div>
+          <div class="amount-value">${fmt(total)}${count > 10 ? '+' : ''}</div>
         </div>
         <div class="emoji">💰</div>
       </div>
       <div>
-        <div class="field-label">Top unclaimed property records${count > 10 ? ` (${count} total found)` : ''}</div>
+        <div class="field-label">${count > 10 ? 'Largest properties in your state under your name' : 'Unclaimed property records'}</div>
+        ${count > 10 ? `<p style="font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.5">We found <strong style="color:#94a3b8">${count} records</strong> matching <strong style="color:#94a3b8">${firstName} ${lastName}</strong> in ${userState}. We search all of them — below are the largest.</p>` : ''}
         <div class="entities-table">
           <div class="entities-header"><span>Held By</span><span>Amount</span></div>
           ${entitiesHtml}
@@ -197,7 +198,7 @@ function renderResults(data) {
         <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
         <div class="check-item"><span class="check-icon">✓</span><span>Full refund if we don't recover anything</span></div>
       </div>
-      <button class="cta-btn" onclick="startCheckout(this)">Claim My ${fmt(total)} →</button>
+      <button class="cta-btn" onclick="startCheckout(this)">${count > 10 ? `Search All ${count} Records for ${firstName} ${lastName} →` : `Claim My ${fmt(total)} →`}</button>
       <p class="cta-sub">Secure checkout via Stripe · $12.95 one-time fee</p>
     </div>
   `;
