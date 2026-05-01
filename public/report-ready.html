@@ -169,9 +169,7 @@ function renderResults(data) {
     </div>
   `).join('');
 
-  const totalRow = count > 1 ? `
-    <div class="entity-total"><span>${count > 20 ? count + ' total records' : 'Total'}</span><span>${count > 20 ? '' : fmt(total)}</span></div>
-  ` : '';
+  const totalRow = `<div class="entity-total"><span>+ ${count - 20} more records found</span><span></span></div>`;
 
   card.innerHTML = `
     <div class="card-header">
@@ -182,14 +180,14 @@ function renderResults(data) {
       <div class="amount-box">
         <div>
           <div class="amount-label">${count} records found in ${userState}</div>
-          <div class="amount-value" style="font-size:22px">${fmt(total)}+</div>
+          <div class="amount-value" style="font-size:28px">Money Found</div>
         </div>
         <div class="emoji">💰</div>
       </div>
       <div>
         <div class="field-label">Page 1 of results — all names matching yours</div>
         <div class="entities-table">
-          <div class="entities-header"><span>Held By</span><span>Amount</span></div>
+          <div class="entities-header"><span>Owner Name &middot; Business</span><span>Amount</span></div>
           ${entitiesHtml}
           ${totalRow}
         </div>
