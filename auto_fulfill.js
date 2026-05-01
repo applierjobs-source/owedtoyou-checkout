@@ -195,10 +195,9 @@ async function fileGenericNAUPA(c, page, searchUrl, opts = {}) {
   const body = await page.content();
   if (!body.toUpperCase().includes(c.last.toUpperCase())) return [false, 'No match'];
 
-  // Click CLAIM on first result
-  const btn = await page.$(`button:has-text("${claimBtn}"),a:has-text("${claimBtn}")`);
-  if (!btn) return [false, 'No claim button found'];
-  await btn.click();
+  // Click CLAIM on first result using reliable clickBtn (not elementHandle)
+  const clicked = await clickBtn(page, claimBtn, 8000);
+  if (!clicked) return [false, 'No claim button found'];
   await sleep(4000);
 
   // Fill contact info
@@ -433,8 +432,8 @@ async function fileMissingMoney(c, page) {
   console.log(`  [MM] ${c.first} ${c.last} (${c.state})`);
   const [dobM, dobD, dobY] = (c.dob||'').split('/');
 
-  await page.goto('https://missingmoney.com', { timeout:60000, waitUntil:'networkidle' });
-  await sleep(3000);
+  await page.goto('https://missingmoney.com', { timeout:90000, waitUntil:'domcontentloaded' });
+  await sleep(5000);
 
   // Search
   await tryFill(page, '#lastNameTop,input[name*="lastName"]', c.last) ||
