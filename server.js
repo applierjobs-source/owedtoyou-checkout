@@ -1,12 +1,13 @@
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 const express = require("express");
 const dotenv = require("dotenv");
 const multer = require("multer");
 const Stripe = require("stripe");
 const Twilio = require("twilio");
 const registerShortener = require("./shortener");
-const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");  // sendReportEmail is required lazily inside /generate-report
+const { sendIntakeEmail, sendReceiptEmail, sendReminderEmail, sendReportRequestEmail } = require("./fulfillment");  // sendReportEmail is required lazily inside /generate-report (lead-gen only)
 const { initDb, saveClaim, getClaims, pool } = require("./db");
 const registerSmsReply = require("./ai-agent");
 const { encrypt, decrypt, isEncrypted } = require("./crypto-utils");
@@ -385,24 +386,19 @@ app.post("/submit-claim-info", upload.single("idImage"), async (req, res) => {
       console.error("[submit-claim-info] sendReceiptEmail error:", err.message);
     });
 
-    // Generate and email PDF report async
-    setImmediate(async () => {
-      try {
-        const { generateReportHTML, searchUnclaimedProperty, SETTLEMENTS, FEDERAL_SOURCES } = require('./report-generator');
-        const { htmlToPdf } = require('./report-pdf');
-        const { sendReportEmail } = require('./fulfillment');
-        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const claimState = (state || 'CA').trim();
-        const unclaimedRecords = await searchUnclaimedProperty(firstName.trim(), lastName.trim(), claimState);
-        const html = generateReportHTML({ firstName: firstName.trim(), lastName: lastName.trim(), city: (city || '').trim(), state: claimState, unclaimedRecords, settlements: SETTLEMENTS, reportDate });
-        const pdfData = { firstName: firstName.trim(), lastName: lastName.trim(), city: (city || '').trim(), state: claimState, unclaimedRecords, settlements: SETTLEMENTS, federalSources: FEDERAL_SOURCES, reportDate };
-        const pdfBuffer = await htmlToPdf(html, pdfData);
-        await sendReportEmail((email || '').trim(), firstName.trim(), pdfBuffer);
-        await pool.query("UPDATE claims SET status='fulfilled' WHERE claim_id=$1", [claimId]);
-        console.log(`[submit-claim-info] Report sent and claim ${claimId} marked fulfilled`);
-      } catch (err) {
-        console.error('[submit-claim-info] Report generation error:', err.message);
-      }
+    // Spawn automated filer — files the actual claim on the state portal
+    setImmediate(() => {
+      const child = spawn(
+        process.execPath,
+        [path.join(__dirname, 'auto_fulfill.js'), claimId],
+        {
+          detached: true,
+          stdio:    'ignore',
+          env: { ...process.env },
+        }
+      );
+      child.unref();
+      console.log(`[submit-claim-info] auto_fulfill spawned for claim ${claimId}`);
     });
 
     return res.json({ success: true, claimId });
