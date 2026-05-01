@@ -510,8 +510,10 @@ app.get("/search-missingmoney", async (req, res) => {
     const entities = properties.slice(0, 20).map(p => ({
       ownerName: (p.ownerName || '').trim(),
       name:      (p.holderName || 'State Treasury').slice(0, 60),
+      address:   (p.address1 || '').trim(),
       city:      (p.city || '').trim(),
       state:     (p.state || '').trim(),
+      zip:       (p.postalCode || '').trim(),
       amtLabel:  p.propertyValue != null
                    ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                    : 'Undisclosed',

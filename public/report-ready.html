@@ -165,7 +165,7 @@ function renderResults(data) {
         <span class="entity-name" style="font-weight:600;color:#f1f5f9">${e.ownerName || (firstName+' '+lastName).toUpperCase()}</span>
         <span class="entity-amt">${e.amtLabel}</span>
       </div>
-      <div style="font-size:12px;color:#64748b">${e.name}${e.city ? ' &middot; ' + e.city + ', ' + e.state : ''}</div>
+      <div style="font-size:12px;color:#64748b">${e.name}${e.address ? ' &middot; ' + e.address : ''}${e.city ? ', ' + e.city + ', ' + e.state : ''}${e.zip ? ' ' + e.zip : ''}</div>
     </div>
   `).join('');
 
