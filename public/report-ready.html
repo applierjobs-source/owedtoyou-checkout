@@ -113,16 +113,27 @@ const stepsEl = document.getElementById('scanSteps');
 const barEl   = document.getElementById('scanBar');
 let resultsData = null;
 
-// Fetch real results from MissingMoney.com via ZenRows
+// Fetch real results — show as soon as both the fetch AND the min animation time are done
+let fetchDone = false, animDone = false;
+
+function tryRender() {
+  if (!fetchDone || !animDone) return;
+  if (resultsData && resultsData.found && resultsData.entities && resultsData.entities.length > 0) {
+    renderResults(resultsData);
+  } else {
+    renderNoResults();
+  }
+}
+
 fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
       '&lastName=' + encodeURIComponent(lastName) +
       '&state=' + encodeURIComponent(userState))
   .then(r => r.json())
-  .then(d => { resultsData = d; })
-  .catch(() => { resultsData = { found: false, entities: [], total: 0 }; });
+  .then(d => { resultsData = d; fetchDone = true; tryRender(); })
+  .catch(() => { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); });
 
-// Show steps over 25 seconds (state portal via ZenRows takes ~15-17s)
-const stepDelay = 23000 / SCAN_STEPS.length;
+// Show steps over 15 seconds minimum — render fires when BOTH animation AND fetch complete
+const stepDelay = 13000 / SCAN_STEPS.length;
 SCAN_STEPS.forEach((label, i) => {
   setTimeout(() => {
     const div = document.createElement('div');
@@ -134,16 +145,11 @@ SCAN_STEPS.forEach((label, i) => {
 });
 
 // Show results after 15 seconds (or immediately if search finished early)
+// Minimum 25s animation, but render as soon as BOTH animation AND fetch are done
 setTimeout(() => {
   barEl.style.width = '100%';
-  setTimeout(() => {
-    if (resultsData && resultsData.found && resultsData.entities && resultsData.entities.length > 0) {
-      renderResults(resultsData);
-    } else {
-      renderNoResults();
-    }
-  }, 500);
-}, 25000);
+  setTimeout(() => { animDone = true; tryRender(); }, 500);
+}, 15000);
 
 // Keep loadResults as no-op (results now shown via timeout above)
 function loadResults() {}
