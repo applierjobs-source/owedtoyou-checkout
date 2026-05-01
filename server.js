@@ -819,6 +819,52 @@ function startFollowUpScheduler() {
 startReminderScheduler();
 startFollowUpScheduler();
 
+// ---------------------------------------------------------------------------
+// Auto-fulfillment poller — runs on startup + every 30 min
+// Finds any claim with intake data (ssn set) that hasn't been fulfilled or
+// logged yet, and spawns auto_fulfill.js for it automatically.
+// ---------------------------------------------------------------------------
+function spawnFulfill(claimId) {
+  const child = spawn(
+    process.execPath,
+    [path.join(__dirname, 'auto_fulfill.js'), claimId],
+    { detached: true, stdio: 'ignore', env: { ...process.env } }
+  );
+  child.unref();
+  console.log(`[auto-poller] Spawned auto_fulfill for ${claimId}`);
+}
+
+async function runFulfillmentPoller() {
+  try {
+    // Find claims that have intake data but are still pending and not in fulfillment_log
+    const { rows } = await pool.query(`
+      SELECT c.claim_id
+      FROM claims c
+      LEFT JOIN fulfillment_log fl ON fl.claim_id = c.claim_id
+      WHERE c.status = 'pending'
+        AND c.ssn IS NOT NULL
+        AND c.ssn != ''
+        AND fl.claim_id IS NULL
+      ORDER BY c.submitted_at ASC
+    `);
+    if (rows.length > 0) {
+      console.log(`[auto-poller] Found ${rows.length} unfulfilled claim(s) — spawning filers`);
+      for (const row of rows) {
+        spawnFulfill(row.claim_id);
+        // Stagger spawns 15s apart so ZenRows isn't hammered simultaneously
+        await new Promise(r => setTimeout(r, 15000));
+      }
+    }
+  } catch (err) {
+    console.error('[auto-poller] Error:', err.message);
+  }
+}
+
+// Run once on startup (after a short delay to let DB init finish)
+setTimeout(runFulfillmentPoller, 10000);
+// Then every 30 minutes to catch anything new that slipped through
+setInterval(runFulfillmentPoller, 30 * 60 * 1000);
+
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
 });
