@@ -836,15 +836,19 @@ function spawnFulfill(claimId) {
 
 async function runFulfillmentPoller() {
   try {
-    // Find claims that have intake data but are still pending and not in fulfillment_log
+    // Find claims that:
+    //  a) have intake data but no log entry yet, OR
+    //  b) previously errored (connection drop, Turnstile hang, etc.) — retry up to 5x
     const { rows } = await pool.query(`
       SELECT c.claim_id
       FROM claims c
       LEFT JOIN fulfillment_log fl ON fl.claim_id = c.claim_id
       WHERE c.status = 'pending'
-        AND c.ssn IS NOT NULL
-        AND c.ssn != ''
-        AND fl.claim_id IS NULL
+        AND c.ssn IS NOT NULL AND c.ssn != ''
+        AND (
+          fl.claim_id IS NULL
+          OR (fl.status = 'error' AND fl.attempts < 5)
+        )
       ORDER BY c.submitted_at ASC
     `);
     if (rows.length > 0) {

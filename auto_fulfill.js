@@ -522,7 +522,12 @@ async function fulfill(claimId) {
   };
 
   console.log(`[auto_fulfill] ${c.first} ${c.last} | ${c.state} | ${c.email}`);
-  await upsertLog(claimId, { email:c.email, first_name:c.first, last_name:c.last, state:c.state, status:'running', attempts:1 });
+  // Increment attempt counter each time we run
+  await pool.query(`
+    INSERT INTO fulfillment_log (claim_id, email, first_name, last_name, state, status, attempts)
+    VALUES ($1,$2,$3,$4,$5,'running',1)
+    ON CONFLICT (claim_id) DO UPDATE SET status='running', attempts=fulfillment_log.attempts+1, updated_at=NOW()
+  `, [claimId, c.email, c.first, c.last, c.state]);
 
   const { chromium } = require('playwright');
   let browser, filed = false, detail = '';
