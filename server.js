@@ -466,33 +466,37 @@ app.get("/search-missingmoney", async (req, res) => {
       try {
         const url = resp.url();
         const ct = resp.headers()['content-type'] || '';
-        if (config.apiPattern && url.includes(config.apiPattern) && ct.includes('json')) {
+        // Catch any JSON response that looks like property search results
+        if (ct.includes('json') && (config.apiPattern ? url.includes(config.apiPattern) : true)) {
           const body = await resp.json().catch(() => null);
           if (body && (body.properties || Array.isArray(body))) {
-            apiData = body;
+            if (!apiData) apiData = body; // take first match
           }
         }
       } catch { /* */ }
     });
 
-    await page.goto(config.url, { timeout: 60000, waitUntil: 'domcontentloaded' });
-    await new Promise(r => setTimeout(r, 4000));
+    // Navigate directly to search results URL with params pre-filled
+    // This triggers the Angular app to fire the API call immediately after Turnstile
+    const searchUrl = `${config.url}?firstName=${encodeURIComponent(firstName.trim())}&lastName=${encodeURIComponent(lastName.trim())}&state=${encodeURIComponent(state)}&searchType=INDIVIDUAL`;
+    await page.goto(searchUrl, { timeout: 90000, waitUntil: 'domcontentloaded' });
+    await new Promise(r => setTimeout(r, 5000));
 
-    // Fill search fields
+    // Also try filling the form in case URL params didn't trigger search
     const tryFill = async (sel, val) => {
       try { const el = await page.$(sel); if (el) { await el.fill(''); await el.type(val, { delay: 30 }); return true; } } catch { }
       return false;
     };
-    await tryFill('input[name*="lastName"], #lastName, [placeholder*="Last"]', lastName.trim());
-    await tryFill('input[name*="firstName"], #firstName, [placeholder*="First"]', firstName.trim());
-    await new Promise(r => setTimeout(r, 1000));
+    if (!apiData) {
+      await tryFill('input[name*="lastName"], #lastName, [placeholder*="Last"]', lastName.trim());
+      await tryFill('input[name*="firstName"], #firstName, [placeholder*="First"]', firstName.trim());
+      await new Promise(r => setTimeout(r, 1000));
+      try { await page.click('button[type=submit], input[type=submit], button:has-text("SEARCH")', { timeout: 5000 }); }
+      catch { await page.keyboard.press('Enter'); }
+    }
 
-    // Submit — ZenRows auto-solves Turnstile
-    try { await page.click('button[type=submit], input[type=submit], button:has-text("SEARCH")', { timeout: 5000 }); }
-    catch { await page.keyboard.press('Enter'); }
-
-    // Wait for Turnstile solve + API response (up to 20s)
-    const deadline = Date.now() + 20000;
+    // Wait up to 30s for API response
+    const deadline = Date.now() + 30000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
     }
