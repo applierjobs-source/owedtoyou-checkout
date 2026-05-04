@@ -266,6 +266,13 @@ async function submitForm() {
 
   gtag('event', 'generate_lead', { currency: 'USD', value: 12.95 });
 
+  // Prefetch search immediately so result is cached by the time animation finishes
+  fetch('/prefetch-search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ firstName, lastName, state })
+  }).catch(() => {});
+
   try {
     await fetch('/generate-report', {
       method: 'POST',

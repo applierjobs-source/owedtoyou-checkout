@@ -678,6 +678,20 @@ app.get("/search-unclaimed", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// POST /prefetch-search — called by homepage the moment user hits submit
+// Kicks off ZenRows search in background so result is cached by the time
+// report-ready.html calls /search-missingmoney
+// ---------------------------------------------------------------------------
+app.post('/prefetch-search', (req, res) => {
+  const { firstName, lastName, state } = req.body;
+  if (!firstName || !lastName) return res.json({ ok: false });
+  res.json({ ok: true }); // respond immediately
+  // Fire search in background — result lands in cache
+  const url = `http://localhost:${process.env.PORT || 3000}/search-missingmoney?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&state=${encodeURIComponent(state || 'TX')}`;
+  require('http').get(url).on('error', () => {});
+});
+
 // POST /generate-report — homepage form submission
 // ---------------------------------------------------------------------------
 app.post("/generate-report", async (req, res) => {
