@@ -530,6 +530,53 @@ app.get("/search-missingmoney", async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Influencer tracking — unique short links per creator
+// ---------------------------------------------------------------------------
+
+// POST /influencer/create-link { name, platform, handle }
+// Creates a unique tracking link for an influencer
+app.post('/influencer/create-link', async (req, res) => {
+  const { name, platform, handle } = req.body;
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const code = 'inf_' + require('crypto').randomBytes(3).toString('hex');
+  const shortUrl = `https://www.owedtoyou.net/c/${code}`;
+  const destUrl  = `https://www.owedtoyou.net/?ref=${code}`;
+  try {
+    // Store in Redis so /c/:code redirects work
+    const { redisSet } = require('./shortener');
+    await pool.query(
+      `INSERT INTO influencer_links (code, influencer_name, platform, handle, short_url)
+       VALUES ($1,$2,$3,$4,$5) ON CONFLICT (code) DO NOTHING`,
+      [code, name, platform||null, handle||null, shortUrl]
+    );
+    // Reuse Redis shortener to store the destination
+    const upstash = `${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent('link:'+code)}/${encodeURIComponent(destUrl)}`;
+    const https2 = require('https');
+    await new Promise((resolve) => {
+      https2.get(upstash, { headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` } }, resolve).on('error', resolve);
+    });
+    return res.json({ code, short_url: shortUrl, dest: destUrl });
+  } catch (err) {
+    console.error('[influencer] create-link error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /influencer/stats — all influencer link performance
+app.get('/influencer/stats', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT il.id, il.influencer_name, il.platform, il.handle, il.short_url,
+            il.clicks, il.conversions, il.revenue, il.created_at,
+            COUNT(pp.id) FILTER (WHERE pp.ref = il.code AND pp.status='completed') AS verified_sales,
+            COALESCE(SUM(1) FILTER (WHERE pp.ref = il.code AND pp.status='completed'), 0) * 12.95 AS verified_revenue
+     FROM influencer_links il
+     LEFT JOIN pending_payments pp ON pp.ref = il.code
+     GROUP BY il.id ORDER BY il.created_at DESC`
+  );
+  res.json(rows);
+});
+
 // GET /search-unclaimed — look up unclaimed property by name in CA database
 // ---------------------------------------------------------------------------
 app.get("/search-unclaimed", async (req, res) => {
