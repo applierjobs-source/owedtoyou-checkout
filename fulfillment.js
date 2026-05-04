@@ -179,6 +179,17 @@ async function sendReminderEmail(customerEmail, token, claimData = {}, reminderN
  */
 async function sendClaimConfirmedEmail(customerEmail, claimId, firstName) {
   const name = firstName || 'there';
+  const isFreeFlow = claimId && claimId.startsWith('FREE-');
+  const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://www.owedtoyou.net';
+
+  const paymentSection = isFreeFlow ? `
+      <hr class="divider"/>
+      <div style="background:#1e293b;border-radius:14px;padding:20px;text-align:center">
+        <p style="font-size:13px;color:#94a3b8;margin-bottom:4px">Your claim has been successfully filed.</p>
+        <p style="font-size:15px;font-weight:600;color:#fff;margin-bottom:16px">Complete your $12.95 service fee to finalize your claim.</p>
+        <a href="${BASE_URL}/pay/${claimId}" style="display:inline-block;background:#10b981;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:16px;text-decoration:none">Pay $12.95 to Complete →</a>
+        <p style="font-size:11px;color:#475569;margin-top:12px">One-time fee. Full refund if your claim is not approved.</p>
+      </div>` : '';
 
   const bodyHtml = `
     <div class="card-header">
@@ -193,6 +204,7 @@ async function sendClaimConfirmedEmail(customerEmail, claimId, firstName) {
         <div style="font-size:24px;font-weight:800;color:#34d399;letter-spacing:2px;font-family:monospace">${claimId}</div>
       </div>
       <p>Estimated processing time: <strong style="color:#fff">6–8 weeks</strong>. You'll receive a check by mail when approved.</p>
+      ${paymentSection}
       <hr class="divider"/>
       <p style="font-size:13px;color:#475569">Keep your Claim ID for your records. Questions? Reply to this email.</p>
     </div>

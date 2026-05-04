@@ -1121,3 +1121,81 @@ setInterval(runFulfillmentPoller, 30 * 60 * 1000);
 app.listen(port, () => {
   console.log(`Checkout page running on ${publicBaseUrl}`);
 });
+
+// ---------------------------------------------------------------------------
+// FREE FILING FLOW — file first, pay after
+// ---------------------------------------------------------------------------
+
+// GET /free — serve the free filing landing page
+app.get('/free', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free.html')));
+
+// POST /submit-free-claim — saves claim info, fires auto_fulfill, no Stripe
+app.post('/submit-free-claim', async (req, res) => {
+  const { firstName, lastName, email, state, dob, phone, address, city, zip } = req.body;
+  if (!firstName || !lastName || !email || !state) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Generate a claim ID
+    const claimId = 'FREE-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
+
+    // Save to claims table (no SSN required for free flow — just name/dob/contact)
+    await pool.query(`
+      INSERT INTO claims (claim_id, first_name, last_name, email, state, phone, dob, address, city, zip, status, submitted_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',NOW())
+      ON CONFLICT DO NOTHING
+    `, [claimId, firstName, lastName, email, state, phone||'', dob||'', address||'', city||'', zip||'']);
+
+    // Fire auto_fulfill immediately — no payment required upfront
+    setImmediate(() => {
+      const child = require('child_process').spawn(
+        process.execPath,
+        [path.join(__dirname, 'auto_fulfill.js'), claimId],
+        { detached: true, stdio: 'ignore', env: { ...process.env } }
+      );
+      child.unref();
+      console.log(`[free-claim] auto_fulfill spawned for ${claimId}`);
+    });
+
+    return res.json({ ok: true, claimId });
+  } catch (err) {
+    console.error('[free-claim] Error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /pay/:claimId — Stripe payment link for post-filing payment
+app.get('/pay/:claimId', async (req, res) => {
+  const { claimId } = req.params;
+  try {
+    // Verify claim exists and was filed
+    const { rows } = await pool.query('SELECT first_name, last_name, email FROM claims WHERE claim_id=$1', [claimId]);
+    if (!rows[0]) return res.status(404).send('Claim not found');
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: 1295,
+          product_data: {
+            name: 'OwedToYou.net — Claim Filing Fee',
+            description: `Claim filed for ${rows[0].first_name} ${rows[0].last_name} (${claimId})`,
+          },
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      customer_email: rows[0].email,
+      success_url: `${process.env.PUBLIC_BASE_URL || 'https://www.owedtoyou.net'}/paid.html?claimId=${claimId}`,
+      cancel_url: `${process.env.PUBLIC_BASE_URL || 'https://www.owedtoyou.net'}/pay/${claimId}`,
+      metadata: { claimId, source: 'free-flow' },
+    });
+
+    return res.redirect(session.url);
+  } catch (err) {
+    console.error('[pay] Error:', err.message);
+    return res.status(500).send('Error creating payment link');
+  }
+});
