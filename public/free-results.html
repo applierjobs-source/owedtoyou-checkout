@@ -354,7 +354,7 @@ async function submitFreeClaim() {
     const d = await res.json();
     if (d.ok) {
       // Navigate to live status page
-      window.location.href = '/filing-status.html?claimId=' + encodeURIComponent(d.claimId) + '&email=' + encodeURIComponent(emailEl.value.trim()) + '&name=' + encodeURIComponent(firstName);
+      window.location.href = '/filing-status?claimId=' + encodeURIComponent(d.claimId) + '&email=' + encodeURIComponent(emailEl.value.trim()) + '&name=' + encodeURIComponent(firstName);
     } else { btn.disabled = false; btn.textContent = 'Try Again'; }
   } catch(e) { btn.disabled = false; btn.textContent = 'Try Again'; }
 }
