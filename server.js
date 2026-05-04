@@ -488,10 +488,6 @@ app.get("/search-missingmoney", async (req, res) => {
       } catch { /* */ }
     });
 
-    // Load MissingMoney homepage then fill + submit the search form
-    await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
-    await new Promise(r => setTimeout(r, 4000));
-
     const typeInto = async (sel, val) => {
       const el = await page.$(sel);
       if (!el) return;
@@ -502,13 +498,35 @@ app.get("/search-missingmoney", async (req, res) => {
       }, el);
     };
 
+    // Track AWS WAF token — must be issued before search fires or results are blocked
+    let wafToken = false;
+    page.on('response', async resp => {
+      try {
+        if (resp.url().includes('awswaf') && resp.url().includes('mp_verify')) {
+          const b = await resp.json().catch(() => null);
+          if (b?.token) wafToken = true;
+        }
+      } catch { /* */ }
+    });
+
+    // Load homepage
+    await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
+
+    // Wait for WAF token before doing anything (critical — search blocked without it)
+    const wafDeadline = Date.now() + 25000;
+    while (!wafToken && Date.now() < wafDeadline) await new Promise(r => setTimeout(r, 500));
+
+    // Extra settle time after WAF token
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Fill form and submit
     await typeInto('#lastNameTop, input[name*="lastName"]', lastName.trim());
     await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
-    try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all */ }
+    try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all states */ }
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
 
-    // Wait up to 45s for results (residential proxy + Turnstile solve takes ~20-30s)
+    // Wait up to 45s for results
     const deadline = Date.now() + 45000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));

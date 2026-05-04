@@ -132,8 +132,8 @@ fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
   .then(d => { resultsData = d; fetchDone = true; tryRender(); })
   .catch(() => { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); });
 
-// Steps animate over 13s, bar holds at 95% until fetch completes
-const stepDelay = 13000 / SCAN_STEPS.length;
+// Steps animate over 20s, bar holds at 95% until fetch completes (MM takes ~50s)
+const stepDelay = 18000 / SCAN_STEPS.length;
 SCAN_STEPS.forEach((label, i) => {
   setTimeout(() => {
     const div = document.createElement('div');
@@ -150,7 +150,7 @@ setTimeout(() => {
   barEl.style.width = '95%';
   animDone = true;
   tryRender(); // render immediately if fetch already done
-}, 13500);
+}, 20000);
 
 // Override tryRender to also push bar to 100% when both are ready
 const _tryRender = tryRender;
