@@ -328,7 +328,9 @@ async function startFreeClaim(btn) {
       <div style="display:flex;flex-direction:column;gap:12px">
         <input id="fc-email" type="email" placeholder="Email address *" value="${email}" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
         <input id="fc-dob" type="text" placeholder="Date of birth (MM/DD/YYYY) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <input id="fc-phone" type="tel" placeholder="Phone number" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <input id="fc-ssn" type="password" placeholder="Social Security Number (SSN) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <p style="font-size:11px;color:#475569;margin-top:-4px">Required by state portals to file. Encrypted and never shared.</p>
+        <input id="fc-phone" type="tel" placeholder="Phone number *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
         <input id="fc-address" type="text" placeholder="Street address" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
         <div style="display:flex;gap:8px">
           <input id="fc-city" type="text" placeholder="City" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;flex:1" />
@@ -348,12 +350,13 @@ async function submitFreeClaim() {
   const phoneEl = document.getElementById('fc-phone');
   const addressEl = document.getElementById('fc-address');
   const btn = document.getElementById('fc-submit');
-  if (!emailEl.value || !dobEl.value) { alert('Please enter your email and date of birth.'); return; }
+  const ssnEl = document.getElementById('fc-ssn');
+  if (!emailEl.value || !dobEl.value || !ssnEl.value) { alert('Please fill in all required fields including your SSN.'); return; }
   btn.disabled = true; btn.textContent = 'Filing...';
   try {
     const res = await fetch('/submit-free-claim', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim(), city: document.getElementById('fc-city')?.value.trim()||'', zip: document.getElementById('fc-zip')?.value.trim()||'' })
+      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), ssn: ssnEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim(), city: document.getElementById('fc-city')?.value.trim()||'', zip: document.getElementById('fc-zip')?.value.trim()||'' })
     });
     const d = await res.json();
     if (d.ok) {

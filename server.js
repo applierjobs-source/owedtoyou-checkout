@@ -1142,21 +1142,24 @@ app.get('/filing-status', (req, res) => res.sendFile(path.join(__dirname, 'publi
 
 // POST /submit-free-claim — saves claim info, fires auto_fulfill, no Stripe
 app.post('/submit-free-claim', async (req, res) => {
-  const { firstName, lastName, email, state, dob, phone, address, city, zip } = req.body;
+  const { firstName, lastName, email, state, dob, ssn, phone, address, city, zip } = req.body;
   if (!firstName || !lastName || !email || !state) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    // Generate a claim ID
     const claimId = 'FREE-' + require('crypto').randomBytes(4).toString('hex').toUpperCase();
 
-    // Save to claims table (no SSN required for free flow — just name/dob/contact)
+    // Encrypt SSN before storing
+    const { encrypt } = require('./crypto-utils');
+    const encryptedSsn = ssn ? encrypt(ssn) : '';
+    const encryptedDob = dob ? encrypt(dob) : '';
+
     await pool.query(`
-      INSERT INTO claims (claim_id, first_name, last_name, email, state, phone, dob, address, city, zip, status, submitted_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',NOW())
+      INSERT INTO claims (claim_id, first_name, last_name, email, state, phone, ssn, dob, address, city, zip, status, submitted_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending',NOW())
       ON CONFLICT DO NOTHING
-    `, [claimId, firstName, lastName, email, state, phone||'', dob||'', address||'', city||'', zip||'']);
+    `, [claimId, firstName, lastName, email, state, phone||'', encryptedSsn, encryptedDob, address||'', city||'', zip||'']);
 
     // Fire auto_fulfill immediately — no payment required upfront
     setImmediate(() => {
