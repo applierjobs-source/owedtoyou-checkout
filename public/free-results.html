@@ -259,7 +259,7 @@ function renderResults(data) {
         <div class="check-item"><span class="check-icon">✓</span><span>Pay <strong>$12.95</strong> only after your claim is filed</span></div>
       </div>
       <button class="cta-btn" onclick="startFreeClaim(this)">File My Claim — Free →</button>
-      <p class="cta-sub">No credit card required · pay only after we file</p>
+      <p class="cta-sub">No credit card required · pay $12.95 only after we file</p>
       <div class="faq">
         <div class="faq-item"><div class="faq-q">Why are there records from multiple states?</div><div class="faq-a">MissingMoney searches all participating states. Unclaimed property can be held anywhere you previously lived, worked, or had accounts.</div></div>
         <div class="faq-item"><div class="faq-q">How do you file the claim?</div><div class="faq-a">After payment we collect your details and file directly with each state's official unclaimed property portal. Most claims are processed within 90 days.</div></div>
@@ -353,8 +353,8 @@ async function submitFreeClaim() {
     });
     const d = await res.json();
     if (d.ok) {
-      document.querySelector('[style*="position:fixed"]')?.remove();
-      showFilingStatus(d.claimId, emailEl.value.trim());
+      // Navigate to live status page
+      window.location.href = '/filing-status.html?claimId=' + encodeURIComponent(d.claimId) + '&email=' + encodeURIComponent(emailEl.value.trim()) + '&name=' + encodeURIComponent(firstName);
     } else { btn.disabled = false; btn.textContent = 'Try Again'; }
   } catch(e) { btn.disabled = false; btn.textContent = 'Try Again'; }
 }
