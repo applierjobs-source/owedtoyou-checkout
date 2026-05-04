@@ -443,12 +443,24 @@ const STATE_SEARCH_CONFIG = {
   MA: { url: 'https://www.unclaimedproperty.mass.gov/app/claim-search', apiPattern: '/SWS/properties' },
 };
 
+// In-memory cache: key = "first|last|state", value = { result, ts }
+const searchCache = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
 
   const state = (userState || 'TX').trim().toUpperCase();
   const config = STATE_SEARCH_CONFIG[state] || STATE_SEARCH_CONFIG['TX'];
+
+  // Serve cached result if fresh
+  const cacheKey = `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    console.log(`[search] cache hit: ${cacheKey}`);
+    return res.json(cached.result);
+  }
 
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
   const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}`;
@@ -495,8 +507,8 @@ app.get("/search-missingmoney", async (req, res) => {
       catch { await page.keyboard.press('Enter'); }
     }
 
-    // Wait up to 30s for API response
-    const deadline = Date.now() + 30000;
+    // Wait up to 45s for API response (Turnstile can be slow)
+    const deadline = Date.now() + 45000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
     }
@@ -525,7 +537,9 @@ app.get("/search-missingmoney", async (req, res) => {
     }));
 
     const total = properties.reduce((s, p) => s + (parseFloat(p.propertyValue) || 0), 0);
-    return res.json({ found: true, entities, total, count: properties.length });
+    const result = { found: true, entities, total, count: properties.length };
+    searchCache.set(cacheKey, { result, ts: Date.now() });
+    return res.json(result);
 
   } catch (err) {
     console.error('[search-missingmoney] Error:', err.message);
