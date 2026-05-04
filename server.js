@@ -159,7 +159,7 @@ app.post('/upload-mms-image', (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { extensions: ['html'] }));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1128,6 +1128,7 @@ app.listen(port, () => {
 
 // GET /free — serve the free filing landing page
 app.get('/free', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free.html')));
+app.get('/free/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free.html')));
 // GET /free-results — results page for free flow
 app.get('/free-results', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free-results.html')));
 // GET /filing-status — live filing progress page
