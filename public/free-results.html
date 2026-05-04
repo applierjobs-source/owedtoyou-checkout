@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Results Found — File Free | OwedToYou.net</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020817;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;margin-top:8px}
+.logo-text{font-size:17px;font-weight:700}
+.card{width:100%;max-width:440px;background:#0f172a;border:1px solid #1e293b;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)}
+.card-header{background:#059669;padding:20px 24px}
+.card-header p{color:#a7f3d0;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.card-header h1{color:#fff;font-size:22px;font-weight:700;line-height:1.3}
+.card-body{padding:24px;display:flex;flex-direction:column;gap:20px}
+.amount-box{background:#1e293b;border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+.amount-label{font-size:10px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.amount-value{font-size:32px;font-weight:700;color:#34d399;line-height:1}
+.emoji{font-size:36px}
+.field-label{font-size:10px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.field-value{font-size:15px;font-weight:600;color:#f1f5f9}
+.field-value.light{font-weight:400;color:#cbd5e1}
+.divider{border:none;border-top:1px solid #1e293b}
+/* Entities table */
+.entities-table{background:#1e293b;border-radius:12px;overflow:hidden;font-size:13px}
+.entities-header{display:flex;justify-content:space-between;padding:8px 14px;background:#0f2744;color:#64748b;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.entity-row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-top:1px solid #2d3f55}
+.entity-name{color:#cbd5e1;flex:1;margin-right:12px;line-height:1.3}
+.entity-amt{color:#34d399;font-weight:700;white-space:nowrap}
+.entity-total{display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid #334155;background:#152234;color:#fff;font-weight:700;font-size:14px}
+.checklist{display:flex;flex-direction:column;gap:10px}
+.check-item{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:#94a3b8}
+.check-icon{color:#34d399;flex-shrink:0;margin-top:1px}
+.check-item strong{color:#fff}
+.cta-btn{width:100%;background:#10b981;color:#fff;border:none;border-radius:14px;padding:17px;font-size:17px;font-weight:700;cursor:pointer;transition:background 0.15s;box-shadow:0 10px 30px -10px rgba(16,185,129,0.4)}
+.cta-btn:hover{background:#34d399}
+.cta-btn:disabled{opacity:0.7;cursor:not-allowed}
+.cta-sub{text-align:center;font-size:12px;color:#475569}
+.faq{margin-top:24px;border-top:1px solid #1e293b;padding-top:20px;text-align:left}
+.faq-item{margin-bottom:16px}
+.faq-q{font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:4px}
+.faq-a{font-size:13px;color:#64748b;line-height:1.5}
+.footer{margin-top:28px;font-size:11px;color:#334155;text-align:center;max-width:340px;line-height:1.6}
+/* Loading state */
+.loading-state{text-align:center;padding:40px 24px}
+.spinner{width:40px;height:40px;border:3px solid #1e293b;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state p{color:#64748b;font-size:14px}
+/* No results */
+.no-results{text-align:center;padding:24px}
+.no-results p{color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:16px}
+</style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4S7RB3FNTK"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-4S7RB3FNTK');</script>
+<!-- Google Ads -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18094147730"></script>
+<script>gtag('config','AW-18094147730');</script>
+</head>
+<body>
+
+<div class="logo">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="13" stroke="#10b981" stroke-width="2"/>
+    <text x="14" y="19" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700" font-family="system-ui">$</text>
+  </svg>
+  <span class="logo-text">OwedToYou.net</span>
+</div>
+
+<div class="card" id="card">
+  <div id="scanState">
+    <div class="card-header" id="scanHeader">
+      <p id="scanLabel">SCANNING</p>
+      <h1 id="scanTitle">Searching databases for <span id="scanName"></span>...</h1>
+    </div>
+    <div style="padding:24px">
+      <div style="background:#1e293b;border-radius:12px;overflow:hidden;height:8px;margin-bottom:20px">
+        <div id="scanBar" style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);width:0%;transition:width 0.5s ease;border-radius:12px"></div>
+      </div>
+      <div id="scanSteps" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+function fmt(n) {
+  return new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format(n);
+}
+
+const params = new URLSearchParams(window.location.search);
+const firstName = params.get('name') || 'there';
+const lastName = params.get('lastName') || '';
+const email = params.get('email') || '';
+const userState = params.get('state') || '';
+
+// Scan steps shown during 15-second animation
+const SCAN_STEPS = [
+  'Searching all 50 state databases...',
+  'Checking state treasury records...',
+  'Searching unclaimed wages and deposits...',
+  'Scanning dormant financial accounts...',
+  'Checking IRS unclaimed refunds...',
+  'Checking FDIC failed bank deposits...',
+  'Matching active class action settlements...',
+  'Checking federal pension records (PBGC)...',
+  'Searching county and municipal records...',
+  'Verifying matches for ' + firstName + ' ' + lastName + '...',
+  'Compiling your results...',
+];
+
+document.getElementById('scanName').textContent = firstName + (lastName ? ' ' + lastName : '');
+
+const stepsEl = document.getElementById('scanSteps');
+const barEl   = document.getElementById('scanBar');
+let resultsData = null;
+
+// Fetch real results — show as soon as both the fetch AND the min animation time are done
+let fetchDone = false, animDone = false;
+
+function tryRender() {
+  if (!fetchDone || !animDone) return;
+  if (resultsData && resultsData.found && resultsData.entities && resultsData.entities.length > 0) {
+    renderResults(resultsData);
+  } else {
+    renderNoResults();
+  }
+}
+
+// Keep retrying until we get results or 5 attempts exhausted
+(async function fetchWithRetry() {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const r = await fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
+        '&lastName=' + encodeURIComponent(lastName) +
+        '&state=' + encodeURIComponent(userState));
+      const d = await r.json();
+      if (d.found || (i === 4)) { // accept result on last attempt regardless
+        resultsData = d;
+        fetchDone = true;
+        tryRender();
+        return;
+      }
+      // Not found yet but server said retry — try again immediately
+      console.log('Search attempt ' + (i+1) + ' empty, retrying...');
+    } catch (e) {
+      if (i === 4) { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); return; }
+    }
+  }
+})();
+
+// Extended steps shown if search takes longer than initial animation
+const EXTENDED_STEPS = [
+  'Cross-referencing federal databases...',
+  'Checking IRS unclaimed refunds...',
+  'Scanning Social Security records...',
+  'Verifying property transfers...',
+  'Checking unclaimed wages...',
+  'Reviewing insurance records...',
+  'Finalizing results...'
+];
+
+// After initial steps finish, keep adding items every 6s so screen never looks frozen
+setTimeout(() => {
+  if (fetchDone) return; // already done, don't bother
+  let extIdx = 0;
+  const extInterval = setInterval(() => {
+    if (fetchDone) { clearInterval(extInterval); return; }
+    if (extIdx >= EXTENDED_STEPS.length) extIdx = 0; // loop if needed
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
+    div.innerHTML = `<span style="color:#f59e0b">&#9679;</span><span>${EXTENDED_STEPS[extIdx++]}</span>`;
+    stepsEl.appendChild(div);
+    stepsEl.scrollTop = stepsEl.scrollHeight;
+  }, 6000);
+}, 20000);
+
+// Steps animate over 20s, bar holds at 95% until fetch completes (MM takes ~50s)
+const stepDelay = 18000 / SCAN_STEPS.length;
+SCAN_STEPS.forEach((label, i) => {
+  setTimeout(() => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
+    div.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + label + '</span>';
+    stepsEl.appendChild(div);
+    barEl.style.width = ((i + 1) / SCAN_STEPS.length * 92) + '%';
+  }, i * stepDelay);
+});
+
+// Show results after 15 seconds (or immediately if search finished early)
+// After 13s hold bar at 95% — jumps to 100% only when fetch completes
+setTimeout(() => {
+  barEl.style.width = '95%';
+  animDone = true;
+  tryRender(); // render immediately if fetch already done
+}, 20000);
+
+// Override tryRender to also push bar to 100% when both are ready
+const _tryRender = tryRender;
+tryRender = function() {
+  if (fetchDone && animDone) {
+    barEl.style.width = '100%';
+    setTimeout(_tryRender, 300);
+  }
+};
+
+// Keep loadResults as no-op (results now shown via timeout above)
+function loadResults() {}
+
+function renderResults(data) {
+  const { entities, total, count } = data;
+  const card = document.getElementById('card');
+
+  if (!entities || entities.length === 0) {
+    renderNoResults();
+    return;
+  }
+
+  gtag('event', 'view_item', { currency: 'USD', value: total });
+
+  const entitiesHtml = entities.map(e => `
+    <div class="entity-row" style="flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px">
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+        <span class="entity-name" style="font-weight:600;color:#f1f5f9">${e.ownerName || (firstName+' '+lastName).toUpperCase()}</span>
+        <span class="entity-amt">${e.amtLabel}</span>
+      </div>
+      <div style="font-size:12px;color:#64748b">${e.name}${e.address ? ' &middot; ' + e.address : ''}${e.city ? ', ' + e.city + ', ' + e.state : ''}${e.zip ? ' ' + e.zip : ''}</div>
+    </div>
+  `).join('');
+
+  const totalRow = `<div class="entity-total"><span>+ ${count - 20} more records found</span><span></span></div>`;
+
+  card.innerHTML = `
+    <div class="card-header">
+      <p>Unclaimed Funds Found</p>
+      <h1>${firstName}, we found money — filing is free.</h1>
+    </div>
+    <div class="card-body">
+      <div class="amount-box">
+        <div>
+          <div class="amount-label">${count} records found in ${userState}</div>
+          <div class="amount-value" style="font-size:28px">Money Found</div>
+        </div>
+        <div class="emoji">💰</div>
+      </div>
+      <div>
+        <div class="entities-table">
+          <div class="entities-header"><span>Owner Name &middot; Business</span><span>Amount</span></div>
+          ${entitiesHtml}
+          ${totalRow}
+        </div>
+      </div>
+      <hr class="divider"/>
+      <div class="checklist">
+        <div class="check-item"><span class="check-icon">✓</span><span>We file your claim right now — no payment needed</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Watch live as we file with the state</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Pay <strong>$12.95</strong> only after your claim is filed</span></div>
+      </div>
+      <button class="cta-btn" onclick="startFreeClaim(this)">File My Claim — Free →</button>
+      <p class="cta-sub">No credit card required · pay only after we file</p>
+      <div class="faq">
+        <div class="faq-item"><div class="faq-q">Why are there records from multiple states?</div><div class="faq-a">MissingMoney searches all participating states. Unclaimed property can be held anywhere you previously lived, worked, or had accounts.</div></div>
+        <div class="faq-item"><div class="faq-q">How do you file the claim?</div><div class="faq-a">After payment we collect your details and file directly with each state's official unclaimed property portal. Most claims are processed within 90 days.</div></div>
+        <div class="faq-item"><div class="faq-q">What if my name has multiple matches?</div><div class="faq-a">We cross-reference your personal details to identify which records are yours before filing.</div></div>
+        <div class="faq-item"><div class="faq-q">What's the refund policy?</div><div class="faq-a">Full refund if we don't recover any funds for you. No questions asked.</div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderNoResults() {
+  const card = document.getElementById('card');
+  card.innerHTML = `
+    <div class="card-header" style="background:#1e3a5f">
+      <p>SEARCH COMPLETE</p>
+      <h1>No funds found for ${firstName} ${lastName}</h1>
+    </div>
+    <div class="card-body">
+      <div class="no-results">
+        <p>We searched MissingMoney.com and did not find any unclaimed property under your name in ${userState || 'your state'}.</p>
+        <p style="margin-top:12px">This can happen if funds are held under a previous address, a business name, or haven't been reported yet. Our filing service checks additional state portals and legacy databases not covered by MissingMoney.</p>
+      </div>
+      <hr class="divider"/>
+      <div class="checklist">
+        <div class="check-item"><span class="check-icon">✓</span><span>We file across all 50 state portals, not just MissingMoney</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span>Flat fee of <strong>$12.95</strong> — no hidden costs</span></div>
+        <div class="check-item"><span class="check-icon">✓</span><span><strong>Full refund</strong> if we recover nothing</span></div>
+      </div>
+      <button class="cta-btn" onclick="startCheckout(this)">Search All 50 States →</button>
+      <p class="cta-sub">Secure checkout via Stripe · $12.95 one-time fee</p>
+    </div>
+  `;
+}
+
+function showWaitlist(btn, amtFmt) {
+  const container = btn.parentElement;
+  container.innerHTML = `
+    <div style="background:#0f2a1a;border:1px solid #166534;border-radius:14px;padding:24px;text-align:center">
+      <div style="font-size:20px;font-weight:700;color:#10b981;margin-bottom:8px">We're at capacity</div>
+      <p style="color:#94a3b8;font-size:14px;margin-bottom:20px;line-height:1.5">We're currently processing existing orders. Join the waitlist and we'll email you as soon as we reopen.</p>
+      <div style="display:flex;gap:8px;max-width:400px;margin:0 auto">
+        <input id="waitlist-email" type="email" placeholder="your@email.com" value="${email||''}" style="flex:1;background:#1e3a5f;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px;color:#fff;font-size:15px;outline:none" />
+        <button onclick="submitWaitlist()" style="background:#10b981;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap">Join</button>
+      </div>
+      <div id="waitlist-msg" style="margin-top:12px;font-size:13px;color:#10b981;display:none">You're on the list. We'll be in touch soon.</div>
+    </div>
+  `;
+}
+
+async function submitWaitlist() {
+  const emailVal = document.getElementById('waitlist-email').value.trim();
+  if (!emailVal) return;
+  await fetch('/waitlist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: emailVal, name: firstName }) });
+  document.getElementById('waitlist-msg').style.display = 'block';
+}
+
+async function startFreeClaim(btn) {
+  btn.disabled = true;
+  btn.textContent = 'Opening claim form...';
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px;padding:28px;width:100%;max-width:400px">
+      <h2 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Enter your details</h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px">We need this to file your claim with the state.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input id="fc-email" type="email" placeholder="Email address *" value="${email}" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <input id="fc-dob" type="text" placeholder="Date of birth (MM/DD/YYYY) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <input id="fc-phone" type="tel" placeholder="Phone number" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <input id="fc-address" type="text" placeholder="Street address" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+      </div>
+      <button id="fc-submit" onclick="submitFreeClaim()" style="margin-top:20px;width:100%;background:#10b981;color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer">File My Claim — Free →</button>
+      <p style="text-align:center;font-size:11px;color:#475569;margin-top:10px">No credit card required. You'll pay $12.95 only after we file.</p>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function submitFreeClaim() {
+  const emailEl = document.getElementById('fc-email');
+  const dobEl = document.getElementById('fc-dob');
+  const phoneEl = document.getElementById('fc-phone');
+  const addressEl = document.getElementById('fc-address');
+  const btn = document.getElementById('fc-submit');
+  if (!emailEl.value || !dobEl.value) { alert('Please enter your email and date of birth.'); return; }
+  btn.disabled = true; btn.textContent = 'Filing...';
+  try {
+    const res = await fetch('/submit-free-claim', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim() })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      document.querySelector('[style*="position:fixed"]')?.remove();
+      showFilingStatus(d.claimId, emailEl.value.trim());
+    } else { btn.disabled = false; btn.textContent = 'Try Again'; }
+  } catch(e) { btn.disabled = false; btn.textContent = 'Try Again'; }
+}
+
+function showFilingStatus(claimId, userEmail) {
+  const card = document.getElementById('card');
+  card.innerHTML = `
+    <div class="card-header" style="background:#1e3a5f"><p>FILING IN PROGRESS</p><h1>We're filing your claim now.</h1></div>
+    <div class="card-body">
+      <div style="text-align:center;padding:20px 0">
+        <div id="status-spinner" style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px"></div>
+        <div id="status-step" style="font-size:14px;color:#94a3b8">Connecting to state portal...</div>
+        <div style="font-size:12px;color:#475569;margin-top:6px">This takes 1-3 minutes</div>
+      </div>
+      <div id="status-steps" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      <div id="status-result"></div>
+    </div>
+  `;
+  const steps = ['Connecting to state portal...','Locating your records...','Verifying property ownership...','Completing claim form...','Submitting to state database...','Almost done...'];
+  let idx = 0;
+  const stepsEl = document.getElementById('status-steps');
+  const stepEl = document.getElementById('status-step');
+  const stepTimer = setInterval(() => {
+    if (idx < steps.length) {
+      const d = document.createElement('div');
+      d.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b';
+      d.innerHTML = `<span style="color:#10b981">&#10003;</span><span>${steps[idx]}</span>`;
+      stepsEl.appendChild(d); idx++;
+      if (idx < steps.length) stepEl.textContent = steps[idx];
+    }
+  }, 22000);
+  const poll = setInterval(async () => {
+    try {
+      const s = await (await fetch('/claim-status/' + claimId)).json();
+      if (s.status === 'filed') {
+        clearInterval(poll); clearInterval(stepTimer);
+        document.getElementById('status-spinner').style.display = 'none';
+        document.getElementById('status-result').innerHTML = `
+          <div style="background:#064e3b;border:1px solid #10b981;border-radius:14px;padding:20px;text-align:center;margin-top:16px">
+            <div style="font-size:28px;margin-bottom:8px">&#127881;</div>
+            <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Your claim has been filed!</div>
+            <div style="font-size:13px;color:#6ee7b7;margin-bottom:16px">Confirmation: <strong>${s.portalClaimId || claimId}</strong></div>
+            <div style="font-size:13px;color:#94a3b8;margin-bottom:20px">Complete your $12.95 service fee to finalize.</div>
+            <a href="/pay/${claimId}" style="display:block;background:#10b981;color:#fff;padding:15px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none">Pay $12.95 to Complete →</a>
+            <p style="font-size:11px;color:#475569;margin-top:10px">Confirmation also sent to ${userEmail}</p>
+          </div>`;
+      } else if (s.status === 'no_match') {
+        clearInterval(poll); clearInterval(stepTimer);
+        document.getElementById('status-spinner').style.display = 'none';
+        document.getElementById('status-result').innerHTML = `<div style="background:#1e293b;border-radius:14px;padding:20px;text-align:center;margin-top:16px"><div style="font-size:15px;color:#94a3b8">No claimable properties found. No charge.</div></div>`;
+      } else if (s.status === 'error' && s.attempts >= 5) {
+        clearInterval(poll); clearInterval(stepTimer);
+        document.getElementById('status-spinner').style.display = 'none';
+        document.getElementById('status-result').innerHTML = `<div style="background:#1e293b;border-radius:14px;padding:20px;text-align:center;margin-top:16px"><div style="font-size:15px;color:#94a3b8">Still working — you'll receive an email at ${userEmail} when done.</div></div>`;
+      }
+    } catch(e) {}
+  }, 8000);
+}
+
+async function startCheckout(btn, amtFmt) {
+  btn.disabled = true;
+  btn.textContent = 'Loading checkout...';
+  gtag('event', 'begin_checkout', { currency: 'USD', value: 12.95 });
+  try {
+    const res = await fetch('/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: firstName, email,
+        source: sessionStorage.getItem('utm_source') || '',
+        utm_medium: sessionStorage.getItem('utm_medium') || '',
+        utm_campaign: sessionStorage.getItem('utm_campaign') || '',
+        ref: sessionStorage.getItem('ref') || ''
+      })
+    });
+    if (res.status === 503) { showWaitlist(btn, amtFmt); return; }
+    if (res.status === 409) {
+      btn.disabled = false;
+      btn.textContent = 'Already Purchased';
+      btn.style.background = '#334155';
+      btn.style.cursor = 'default';
+      return;
+    }
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else { btn.disabled = false; btn.textContent = 'Try Again'; }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Try Again';
+  }
+}
+
+loadResults();
+</script>
+<div style="text-align:center;padding:24px 0 32px;font-size:11px;color:#475569"><a href="/privacy.html" style="color:#475569;text-decoration:none">Privacy Policy</a> </body>nbsp;</body>middot;</body>nbsp; <a href="/terms.html" style="color:#475569;text-decoration:none">Terms of Service</a></div>
+</body>
+</html>

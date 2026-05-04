@@ -1128,6 +1128,8 @@ app.listen(port, () => {
 
 // GET /free — serve the free filing landing page
 app.get('/free', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free.html')));
+// GET /free-results — results page for free flow
+app.get('/free-results', (req, res) => res.sendFile(path.join(__dirname, 'public', 'free-results.html')));
 
 // POST /submit-free-claim — saves claim info, fires auto_fulfill, no Stripe
 app.post('/submit-free-claim', async (req, res) => {
