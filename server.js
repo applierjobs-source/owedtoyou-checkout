@@ -463,7 +463,8 @@ app.get("/search-missingmoney", async (req, res) => {
   }
 
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
-  const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}`;
+  // proxy_country=us routes through US residential IPs — required to bypass MissingMoney CloudFront block
+  const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}&proxy_country=us`;
 
   let browser;
   try {
@@ -472,42 +473,42 @@ app.get("/search-missingmoney", async (req, res) => {
     const context = browser.contexts()[0] || await browser.newContext();
     const page = await context.newPage();
 
-    // Intercept the JSON API response the Angular app fires after Turnstile solve
+    // Intercept the search results JSON from MissingMoney's SWS API
     let apiData = null;
     page.on('response', async (resp) => {
       try {
         const url = resp.url();
         const ct = resp.headers()['content-type'] || '';
-        // Catch any JSON response that looks like property search results
-        if (ct.includes('json') && (config.apiPattern ? url.includes(config.apiPattern) : true)) {
+        if (ct.includes('json') && url.includes('/SWS/') && url.includes('properties') && !apiData) {
           const body = await resp.json().catch(() => null);
           if (body && (body.properties || Array.isArray(body))) {
-            if (!apiData) apiData = body; // take first match
+            apiData = body;
           }
         }
       } catch { /* */ }
     });
 
-    // Navigate directly to search results URL with params pre-filled
-    // This triggers the Angular app to fire the API call immediately after Turnstile
-    const searchUrl = `${config.url}?firstName=${encodeURIComponent(firstName.trim())}&lastName=${encodeURIComponent(lastName.trim())}&state=${encodeURIComponent(state)}&searchType=INDIVIDUAL`;
-    await page.goto(searchUrl, { timeout: 90000, waitUntil: 'domcontentloaded' });
-    await new Promise(r => setTimeout(r, 5000));
+    // Load MissingMoney homepage then fill + submit the search form
+    await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
+    await new Promise(r => setTimeout(r, 4000));
 
-    // Also try filling the form in case URL params didn't trigger search
-    const tryFill = async (sel, val) => {
-      try { const el = await page.$(sel); if (el) { await el.fill(''); await el.type(val, { delay: 30 }); return true; } } catch { }
-      return false;
+    const typeInto = async (sel, val) => {
+      const el = await page.$(sel);
+      if (!el) return;
+      await el.click(); await el.fill(''); await el.type(val, { delay: 40 });
+      await page.evaluate(el => {
+        el.dispatchEvent(new Event('input', { bubbles:true }));
+        el.dispatchEvent(new Event('change', { bubbles:true }));
+      }, el);
     };
-    if (!apiData) {
-      await tryFill('input[name*="lastName"], #lastName, [placeholder*="Last"]', lastName.trim());
-      await tryFill('input[name*="firstName"], #firstName, [placeholder*="First"]', firstName.trim());
-      await new Promise(r => setTimeout(r, 1000));
-      try { await page.click('button[type=submit], input[type=submit], button:has-text("SEARCH")', { timeout: 5000 }); }
-      catch { await page.keyboard.press('Enter'); }
-    }
 
-    // Wait up to 45s for API response (Turnstile can be slow)
+    await typeInto('#lastNameTop, input[name*="lastName"]', lastName.trim());
+    await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
+    try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all */ }
+    await new Promise(r => setTimeout(r, 1000));
+    await page.keyboard.press('Enter');
+
+    // Wait up to 45s for results (residential proxy + Turnstile solve takes ~20-30s)
     const deadline = Date.now() + 45000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
@@ -522,21 +523,38 @@ app.get("/search-missingmoney", async (req, res) => {
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
     if (properties.length === 0) return res.json({ found: false, entities: [], total: 0 });
 
-    // Return page 1 exactly as the portal shows it — no reordering, no filtering
-    const entities = properties.slice(0, 20).map(p => ({
-      ownerName: (p.ownerName || '').trim(),
-      name:      (p.holderName || 'State Treasury').slice(0, 60),
-      address:   (p.address1 || '').trim(),
-      city:      (p.city || '').trim(),
-      state:     (p.state || '').trim(),
-      zip:       (p.postalCode || '').trim(),
-      amtLabel:  p.propertyValue != null
-                   ? `$${parseFloat(p.propertyValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                   : 'Undisclosed',
-      amount:    parseFloat(p.propertyValue) || 0,
-    }));
+    // Parse amount — MissingMoney uses range text (e.g. "$25 to $50", "Over $100")
+    const parseAmt = (p) => {
+      const label = p.propertyValueDecription || p.propertyValueDescription || '';
+      let num = parseFloat(p.propertyValue) || 0;
+      if (!num && label) {
+        const over  = label.match(/over\s+\$([\d,]+)/i);
+        const range = label.match(/\$([\d,]+)\s+to\s+\$([\d,]+)/i);
+        const exact = label.match(/\$([\d,.]+)/);
+        if (over)   num = parseFloat(over[1].replace(/,/g,''));
+        else if (range) num = (parseFloat(range[1].replace(/,/g,'')) + parseFloat(range[2].replace(/,/g,''))) / 2;
+        else if (exact) num = parseFloat(exact[1].replace(/,/g,''));
+      }
+      const amtLabel = label || (num ? `$${num.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : 'Undisclosed');
+      return { num, amtLabel };
+    };
 
-    const total = properties.reduce((s, p) => s + (parseFloat(p.propertyValue) || 0), 0);
+    // Return page 1 exactly as MissingMoney shows it
+    const entities = properties.slice(0, 20).map(p => {
+      const { num, amtLabel } = parseAmt(p);
+      return {
+        ownerName: (p.ownerName || '').trim(),
+        name:      (p.holderName || 'State Treasury').slice(0, 60),
+        address:   (p.address1 || '').trim(),
+        city:      (p.city || '').trim(),
+        state:     (p.state || '').trim(),
+        zip:       (p.postalCode || '').trim(),
+        amtLabel,
+        amount: num,
+      };
+    });
+
+    const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
     const result = { found: true, entities, total, count: properties.length };
     searchCache.set(cacheKey, { result, ts: Date.now() });
     return res.json(result);
