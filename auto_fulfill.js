@@ -584,6 +584,13 @@ async function fulfill(claimId) {
     console.log(`[auto_fulfill] FILED: ${c.first} ${c.last} (${c.state}) — ${detail}`);
     await upsertLog(claimId, { status:'filed', portal_claim_id:detail });
     await markFulfilled(claimId);
+    // Delete sensitive PII after successful filing (free flow promise)
+    if (claimId.startsWith('FREE-')) {
+      await pool.query(
+        `UPDATE claims SET ssn=NULL, dob=NULL WHERE claim_id=$1`,
+        [claimId]
+      ).catch(() => {});
+    }
     await sendClaimConfirmedEmail(c.email, detail, c.first);
   } else {
     console.log(`[auto_fulfill] NOT FILED: ${c.first} ${c.last} (${c.state}) — ${detail}`);
