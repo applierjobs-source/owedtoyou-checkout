@@ -316,6 +316,113 @@ async function submitWaitlist() {
   document.getElementById('waitlist-msg').style.display = 'block';
 }
 
+function showFilingStatus(claimId, userEmail) {
+  const card = document.getElementById('card');
+  card.innerHTML = `
+    <div class="card-header" style="background:#1e3a5f">
+      <p>FILING IN PROGRESS</p>
+      <h1>We're filing your claim with the state.</h1>
+    </div>
+    <div class="card-body" id="status-body">
+      <div style="text-align:center;padding:20px 0">
+        <div id="status-spinner" style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px"></div>
+        <div id="status-step" style="font-size:14px;color:#94a3b8">Connecting to state portal...</div>
+        <div id="status-sub" style="font-size:12px;color:#475569;margin-top:6px">This takes 1-3 minutes</div>
+      </div>
+      <div id="status-steps" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      <div id="status-result" style="display:none"></div>
+    </div>
+  `;
+
+  const steps = [
+    'Connecting to state portal...',
+    'Locating your records...',
+    'Verifying property ownership...',
+    'Completing claim form...',
+    'Submitting to state database...',
+    'Almost done...',
+  ];
+  let stepIdx = 0;
+  const stepsEl = document.getElementById('status-steps');
+  const stepEl  = document.getElementById('status-step');
+
+  // Cycle through status messages while polling
+  const stepTimer = setInterval(() => {
+    if (stepIdx < steps.length) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b';
+      div.innerHTML = `<span style="color:#10b981">&#10003;</span><span>${steps[stepIdx]}</span>`;
+      stepsEl.appendChild(div);
+      stepIdx++;
+      if (stepIdx < steps.length) stepEl.textContent = steps[stepIdx];
+    }
+  }, 22000);
+
+  // Poll /claim-status every 8 seconds
+  let pollCount = 0;
+  const poll = setInterval(async () => {
+    pollCount++;
+    try {
+      const r = await fetch('/claim-status/' + claimId);
+      const s = await r.json();
+
+      if (s.status === 'filed') {
+        clearInterval(poll);
+        clearInterval(stepTimer);
+        showFiled(claimId, s.portalClaimId, userEmail);
+      } else if (s.status === 'no_match') {
+        clearInterval(poll);
+        clearInterval(stepTimer);
+        showNoMatch(claimId);
+      } else if (s.status === 'error' && s.attempts >= 5) {
+        clearInterval(poll);
+        clearInterval(stepTimer);
+        showError(claimId, userEmail);
+      }
+      // else keep polling (queued/running)
+    } catch(e) { /* keep polling */ }
+  }, 8000);
+}
+
+function showFiled(claimId, portalClaimId, userEmail) {
+  document.getElementById('status-spinner').style.display = 'none';
+  document.getElementById('status-step').textContent = 'Claim filed!';
+  document.getElementById('status-result').style.display = 'block';
+  document.getElementById('status-result').innerHTML = `
+    <div style="background:#064e3b;border:1px solid #10b981;border-radius:14px;padding:20px;text-align:center;margin-top:16px">
+      <div style="font-size:28px;margin-bottom:8px">&#127881;</div>
+      <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Your claim has been filed!</div>
+      <div style="font-size:13px;color:#6ee7b7;margin-bottom:16px">Confirmation: <strong>${portalClaimId || claimId}</strong></div>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:20px">The state will process your claim and send your funds. Complete your $12.95 service fee below.</div>
+      <a href="/pay/${claimId}" style="display:block;background:#10b981;color:#fff;padding:15px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none">Pay $12.95 to Complete →</a>
+      <p style="font-size:11px;color:#475569;margin-top:10px">A confirmation was also sent to ${userEmail}</p>
+    </div>
+  `;
+}
+
+function showNoMatch(claimId) {
+  document.getElementById('status-spinner').style.display = 'none';
+  document.getElementById('status-step').textContent = 'Search complete';
+  document.getElementById('status-result').style.display = 'block';
+  document.getElementById('status-result').innerHTML = `
+    <div style="background:#1e293b;border-radius:14px;padding:20px;text-align:center;margin-top:16px">
+      <div style="font-size:15px;color:#94a3b8">We searched all state portals and couldn't find a claimable property in your name at this time.</div>
+      <div style="font-size:13px;color:#475569;margin-top:8px">No charge. Nothing owed.</div>
+    </div>
+  `;
+}
+
+function showError(claimId, userEmail) {
+  document.getElementById('status-spinner').style.display = 'none';
+  document.getElementById('status-step').textContent = 'Check your email';
+  document.getElementById('status-result').style.display = 'block';
+  document.getElementById('status-result').innerHTML = `
+    <div style="background:#1e293b;border-radius:14px;padding:20px;text-align:center;margin-top:16px">
+      <div style="font-size:15px;color:#94a3b8">We're still working on your claim. You'll receive an email at <strong style="color:#fff">${userEmail}</strong> when it's complete.</div>
+    </div>
+  `;
+}
+
 async function startFreeClaim(btn) {
   btn.disabled = true;
   btn.textContent = 'Opening claim form...';
@@ -370,17 +477,7 @@ async function submitFreeClaim() {
     const d = await res.json();
     if (d.ok) {
       document.querySelector('[style*="position:fixed"]')?.remove();
-      document.getElementById('card').innerHTML = `
-        <div class="card-header"><p>CLAIM SUBMITTED</p><h1>We're filing your claim now.</h1></div>
-        <div class="card-body">
-          <p style="color:#94a3b8;font-size:15px">Hi ${firstName}, we're filing your unclaimed property claim right now. You'll receive an email at <strong style="color:#fff">${emailEl.value}</strong> once it's filed with a link to complete your $12.95 service fee.</p>
-          <div style="background:#1e293b;border-radius:14px;padding:18px;margin-top:16px">
-            <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Claim ID</div>
-            <div style="font-size:20px;font-weight:800;color:#34d399;font-family:monospace">${d.claimId}</div>
-          </div>
-          <p style="font-size:12px;color:#475569;margin-top:16px">No payment needed now. We only ask for $12.95 after your claim is successfully filed.</p>
-        </div>
-      `;
+      showFilingStatus(d.claimId, emailEl.value);
     } else {
       btn.disabled = false;
       btn.textContent = 'Try Again';

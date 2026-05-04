@@ -1165,6 +1165,31 @@ app.post('/submit-free-claim', async (req, res) => {
   }
 });
 
+// GET /claim-status/:claimId — polling endpoint for free filing status
+app.get('/claim-status/:claimId', async (req, res) => {
+  const { claimId } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT fl.status, fl.portal_claim_id, fl.last_error, fl.attempts, fl.updated_at,
+              c.first_name, c.last_name
+       FROM fulfillment_log fl
+       JOIN claims c ON c.claim_id = fl.claim_id
+       WHERE fl.claim_id = $1`, [claimId]
+    );
+    if (!rows[0]) return res.json({ status: 'queued', message: 'Starting...' });
+    const r = rows[0];
+    return res.json({
+      status:       r.status,
+      portalClaimId: r.portal_claim_id,
+      error:        r.last_error,
+      attempts:     r.attempts,
+      updatedAt:    r.updated_at,
+    });
+  } catch (err) {
+    return res.json({ status: 'queued', message: 'Loading...' });
+  }
+});
+
 // GET /pay/:claimId — Stripe payment link for post-filing payment
 app.get('/pay/:claimId', async (req, res) => {
   const { claimId } = req.params;
