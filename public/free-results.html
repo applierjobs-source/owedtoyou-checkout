@@ -330,6 +330,10 @@ async function startFreeClaim(btn) {
         <input id="fc-dob" type="text" placeholder="Date of birth (MM/DD/YYYY) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
         <input id="fc-phone" type="tel" placeholder="Phone number" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
         <input id="fc-address" type="text" placeholder="Street address" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
+        <div style="display:flex;gap:8px">
+          <input id="fc-city" type="text" placeholder="City" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;flex:1" />
+          <input id="fc-zip" type="text" placeholder="ZIP" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100px" />
+        </div>
       </div>
       <button id="fc-submit" onclick="submitFreeClaim()" style="margin-top:20px;width:100%;background:#10b981;color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer">File My Claim — Free →</button>
       <p style="text-align:center;font-size:11px;color:#475569;margin-top:10px">No credit card required. You'll pay $12.95 only after we file.</p>
@@ -349,7 +353,7 @@ async function submitFreeClaim() {
   try {
     const res = await fetch('/submit-free-claim', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim() })
+      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim(), city: document.getElementById('fc-city')?.value.trim()||'', zip: document.getElementById('fc-zip')?.value.trim()||'' })
     });
     const d = await res.json();
     if (d.ok) {

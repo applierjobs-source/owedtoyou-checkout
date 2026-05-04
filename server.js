@@ -1085,6 +1085,12 @@ function spawnFulfill(claimId) {
 
 async function runFulfillmentPoller() {
   try {
+    // Reset any claims stuck in 'running' for more than 10 minutes
+    await pool.query(`
+      UPDATE fulfillment_log SET status='error', last_error='Timed out — reset for retry'
+      WHERE status='running' AND updated_at < NOW() - INTERVAL '10 minutes'
+    `);
+
     // Find claims that:
     //  a) have intake data but no log entry yet, OR
     //  b) previously errored (connection drop, Turnstile hang, etc.) — retry up to 5x
