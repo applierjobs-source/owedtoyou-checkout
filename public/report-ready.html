@@ -37,6 +37,10 @@ body{background:#020817;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFo
 .cta-btn:hover{background:#34d399}
 .cta-btn:disabled{opacity:0.7;cursor:not-allowed}
 .cta-sub{text-align:center;font-size:12px;color:#475569}
+.faq{margin-top:24px;border-top:1px solid #1e293b;padding-top:20px;text-align:left}
+.faq-item{margin-bottom:16px}
+.faq-q{font-size:13px;font-weight:600;color:#cbd5e1;margin-bottom:4px}
+.faq-a{font-size:13px;color:#64748b;line-height:1.5}
 .footer{margin-top:28px;font-size:11px;color:#334155;text-align:center;max-width:340px;line-height:1.6}
 /* Loading state */
 .loading-state{text-align:center;padding:40px 24px}
@@ -215,6 +219,12 @@ function renderResults(data) {
       </div>
       <button class="cta-btn" onclick="startCheckout(this)">File Claim for ${firstName} ${lastName} — $12.95</button>
       <p class="cta-sub">Secure checkout via Stripe · $12.95 one-time fee</p>
+      <div class="faq">
+        <div class="faq-item"><div class="faq-q">Why are there records from multiple states?</div><div class="faq-a">MissingMoney searches all participating states. Unclaimed property can be held anywhere you previously lived, worked, or had accounts.</div></div>
+        <div class="faq-item"><div class="faq-q">How do you file the claim?</div><div class="faq-a">After payment we collect your details and file directly with each state's official unclaimed property portal. Most claims are processed within 90 days.</div></div>
+        <div class="faq-item"><div class="faq-q">What if my name has multiple matches?</div><div class="faq-a">We cross-reference your personal details to identify which records are yours before filing.</div></div>
+        <div class="faq-item"><div class="faq-q">What's the refund policy?</div><div class="faq-a">Full refund if we don't recover any funds for you. No questions asked.</div></div>
+      </div>
     </div>
   `;
 }
