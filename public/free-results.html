@@ -316,64 +316,170 @@ async function submitWaitlist() {
   document.getElementById('waitlist-msg').style.display = 'block';
 }
 
+// Field-at-a-time claim form
+const FC_FIELDS = [
+  { id:'fc-email',   label:'What email should we send your confirmation to?', type:'email',    placeholder:'your@email.com', prefill: () => email, required:true },
+  { id:'fc-dob',     label:'What is your date of birth?', type:'dob',     placeholder:'', required:true },
+  { id:'fc-ssn',     label:'What is your Social Security Number?', type:'password', placeholder:'XXX-XX-XXXX', required:true, note:'Required by state portals. Encrypted and deleted immediately after filing.' },
+  { id:'fc-phone',   label:'What is your phone number?', type:'tel',     placeholder:'(555) 555-5555', required:true },
+  { id:'fc-address', label:'What is your street address?', type:'text',    placeholder:'123 Main St', required:false },
+  { id:'fc-city',    label:'What city do you live in?', type:'text',    placeholder:'Austin', required:false },
+  { id:'fc-zip',     label:'What is your ZIP code?', type:'text',    placeholder:'78701', required:false },
+];
+let fcStep = 0;
+const fcData = {};
+
 async function startFreeClaim(btn) {
   btn.disabled = true;
-  btn.textContent = 'Opening claim form...';
+  fcStep = 0;
+  Object.keys(fcData).forEach(k => delete fcData[k]);
+
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px';
+  modal.id = 'fc-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px';
   modal.innerHTML = `
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:20px;padding:28px;width:100%;max-width:400px">
-      <h2 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Enter your details</h2>
-      <p style="font-size:13px;color:#64748b;margin-bottom:20px">We need this to file your claim with the state.</p>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <input id="fc-email" type="email" placeholder="Email address *" value="${email}" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <input id="fc-dob" type="text" placeholder="Date of birth (MM/DD/YYYY) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <input id="fc-ssn" type="password" placeholder="Social Security Number (SSN) *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <p style="font-size:11px;color:#475569;margin-top:-4px">Required by state portals to file. Encrypted and never shared.</p>
-        <input id="fc-phone" type="tel" placeholder="Phone number *" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <input id="fc-address" type="text" placeholder="Street address" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%" />
-        <div style="display:flex;gap:8px">
-          <input id="fc-city" type="text" placeholder="City" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;flex:1" />
-          <input id="fc-zip" type="text" placeholder="ZIP" style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100px" />
-        </div>
+      <div style="font-size:11px;color:#475569;margin-bottom:20px" id="fc-progress"></div>
+      <div id="fc-field-wrap"></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button id="fc-back" onclick="fcPrev()" style="flex:1;background:#1e293b;color:#94a3b8;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;display:none">← Back</button>
+        <button id="fc-next" onclick="fcNext()" style="flex:2;background:#10b981;color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer">Continue →</button>
       </div>
-      <button id="fc-submit" onclick="submitFreeClaim()" style="margin-top:20px;width:100%;background:#10b981;color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer">File My Claim — Free →</button>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569">
-          <span style="color:#10b981">&#128274;</span><span>256-bit encryption — your data is never stored in plaintext</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569">
-          <span style="color:#10b981">&#10003;</span><span>Your SSN is permanently deleted from our servers immediately after filing</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569">
-          <span style="color:#10b981">&#10003;</span><span>No credit card required — pay $12.95 only after we file</span>
-        </div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569"><span style="color:#10b981">&#128274;</span><span>256-bit encryption — never stored in plaintext</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569"><span style="color:#10b981">&#10003;</span><span>SSN permanently deleted immediately after filing</span></div>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  fcRender();
 }
 
+function fcRender() {
+  const field = FC_FIELDS[fcStep];
+  const total = FC_FIELDS.length;
+  document.getElementById('fc-progress').textContent = `Step ${fcStep+1} of ${total}`;
+  document.getElementById('fc-back').style.display = fcStep > 0 ? 'block' : 'none';
+  const nextBtn = document.getElementById('fc-next');
+  nextBtn.textContent = fcStep === total-1 ? 'File My Claim — Free →' : 'Continue →';
+
+  let inputHtml;
+  if (field.type === 'dob') {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const mOpts = months.map((m,i) => `<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+    const dOpts = Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}</option>`).join('');
+    const yr = new Date().getFullYear();
+    const yOpts = Array.from({length:100},(_,i)=>`<option value="${yr-i}">${yr-i}</option>`).join('');
+    const saved = (fcData[field.id]||'').split('/');
+    inputHtml = `
+      <div style="display:flex;gap:8px">
+        <select id="fc-dob-m" style="flex:2;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px">
+          <option value="">Month</option>${mOpts}
+        </select>
+        <select id="fc-dob-d" style="flex:1;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px">
+          <option value="">Day</option>${dOpts}
+        </select>
+        <select id="fc-dob-y" style="flex:2;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;color:#fff;font-size:14px">
+          <option value="">Year</option>${yOpts}
+        </select>
+      </div>`;
+  } else {
+    const val = fcData[field.id] || (field.prefill ? field.prefill() : '');
+    inputHtml = `<input id="${field.id}" type="${field.type}" placeholder="${field.placeholder}" value="${val}" autocomplete="on"
+      style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px;color:#fff;font-size:16px;outline:none" />`;
+  }
+
+  document.getElementById('fc-field-wrap').innerHTML = `
+    <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:20px;line-height:1.3">${field.label}</div>
+    ${inputHtml}
+    ${field.note ? `<p style="font-size:11px;color:#475569;margin-top:8px">${field.note}</p>` : ''}
+    <div id="fc-err" style="color:#f87171;font-size:12px;margin-top:8px;display:none"></div>
+  `;
+
+  // Restore DOB selections
+  if (field.type === 'dob' && fcData[field.id]) {
+    const [m,d,y] = fcData[field.id].split('/');
+    if (m) document.getElementById('fc-dob-m').value = m;
+    if (d) document.getElementById('fc-dob-d').value = d;
+    if (y) document.getElementById('fc-dob-y').value = y;
+  }
+
+  // Auto-focus
+  setTimeout(() => {
+    const inp = document.getElementById(field.id);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function fcGetValue() {
+  const field = FC_FIELDS[fcStep];
+  if (field.type === 'dob') {
+    const m = document.getElementById('fc-dob-m')?.value;
+    const d = document.getElementById('fc-dob-d')?.value;
+    const y = document.getElementById('fc-dob-y')?.value;
+    return (m && d && y) ? `${m}/${d}/${y}` : '';
+  }
+  return (document.getElementById(field.id)?.value || '').trim();
+}
+
+function fcShowErr(msg) {
+  const el = document.getElementById('fc-err');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function fcPrev() {
+  if (fcStep > 0) { fcStep--; fcRender(); }
+}
+
+async function fcNext() {
+  const field = FC_FIELDS[fcStep];
+  const val = fcGetValue();
+  if (field.required && !val) { fcShowErr('This field is required.'); return; }
+  fcData[field.id] = val;
+
+  if (fcStep < FC_FIELDS.length - 1) {
+    fcStep++;
+    fcRender();
+  } else {
+    // Submit
+    await submitFreeClaim();
+  }
+}
+
+// Allow Enter key to advance
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('fc-modal')) {
+    e.preventDefault();
+    fcNext();
+  }
+});
+
 async function submitFreeClaim() {
-  const emailEl = document.getElementById('fc-email');
-  const dobEl = document.getElementById('fc-dob');
-  const phoneEl = document.getElementById('fc-phone');
-  const addressEl = document.getElementById('fc-address');
-  const btn = document.getElementById('fc-submit');
-  const ssnEl = document.getElementById('fc-ssn');
-  if (!emailEl.value || !dobEl.value || !ssnEl.value) { alert('Please fill in all required fields including your SSN.'); return; }
-  btn.disabled = true; btn.textContent = 'Filing...';
+  const nextBtn = document.getElementById('fc-next');
+  if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = 'Filing...'; }
   try {
     const res = await fetch('/submit-free-claim', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName, lastName, state: userState, email: emailEl.value.trim(), dob: dobEl.value.trim(), ssn: ssnEl.value.trim(), phone: phoneEl.value.trim(), address: addressEl.value.trim(), city: document.getElementById('fc-city')?.value.trim()||'', zip: document.getElementById('fc-zip')?.value.trim()||'' })
+      body: JSON.stringify({
+        firstName, lastName, state: userState,
+        email:   fcData['fc-email']   || email,
+        dob:     fcData['fc-dob']     || '',
+        ssn:     fcData['fc-ssn']     || '',
+        phone:   fcData['fc-phone']   || '',
+        address: fcData['fc-address'] || '',
+        city:    fcData['fc-city']    || '',
+        zip:     fcData['fc-zip']     || '',
+      })
     });
     const d = await res.json();
     if (d.ok) {
-      // Navigate to live status page
-      window.location.href = '/filing-status?claimId=' + encodeURIComponent(d.claimId) + '&email=' + encodeURIComponent(emailEl.value.trim()) + '&name=' + encodeURIComponent(firstName);
-    } else { btn.disabled = false; btn.textContent = 'Try Again'; }
-  } catch(e) { btn.disabled = false; btn.textContent = 'Try Again'; }
+      window.location.href = '/filing-status?claimId=' + encodeURIComponent(d.claimId) + '&email=' + encodeURIComponent(fcData['fc-email']||email) + '&name=' + encodeURIComponent(firstName);
+    } else {
+      if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'File My Claim — Free →'; }
+    }
+  } catch(e) {
+    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Try Again'; }
+  }
 }
 
 function showFilingStatus(claimId, userEmail) {
