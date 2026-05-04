@@ -129,12 +129,27 @@ function tryRender() {
   }
 }
 
-fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
-      '&lastName=' + encodeURIComponent(lastName) +
-      '&state=' + encodeURIComponent(userState))
-  .then(r => r.json())
-  .then(d => { resultsData = d; fetchDone = true; tryRender(); })
-  .catch(() => { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); });
+// Keep retrying until we get results or 5 attempts exhausted
+(async function fetchWithRetry() {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const r = await fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
+        '&lastName=' + encodeURIComponent(lastName) +
+        '&state=' + encodeURIComponent(userState));
+      const d = await r.json();
+      if (d.found || (i === 4)) { // accept result on last attempt regardless
+        resultsData = d;
+        fetchDone = true;
+        tryRender();
+        return;
+      }
+      // Not found yet but server said retry — try again immediately
+      console.log('Search attempt ' + (i+1) + ' empty, retrying...');
+    } catch (e) {
+      if (i === 4) { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); return; }
+    }
+  }
+})();
 
 // Steps animate over 20s, bar holds at 95% until fetch completes (MM takes ~50s)
 const stepDelay = 18000 / SCAN_STEPS.length;

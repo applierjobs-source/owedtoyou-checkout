@@ -462,6 +462,21 @@ app.get("/search-missingmoney", async (req, res) => {
     return res.json(cached.result);
   }
 
+  // Retry loop — keep trying until we get results, up to 5 attempts
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const result = await attemptMissingMoneySearch(firstName, lastName, state, attempt);
+    if (result) {
+      searchCache.set(cacheKey, { result, ts: Date.now() });
+      return res.json(result);
+    }
+    console.log(`[search] Attempt ${attempt} failed — retrying...`);
+  }
+  // All attempts failed — return empty but don't say no funds
+  return res.json({ found: false, entities: [], total: 0, retry: true });
+});
+
+async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
+
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
   // proxy_country=us routes through US residential IPs — required to bypass MissingMoney CloudFront block
   const WSS = `wss://browser.zenrows.com?apikey=${ZR_KEY}&proxy_country=us`;
@@ -512,11 +527,11 @@ app.get("/search-missingmoney", async (req, res) => {
     // Load homepage
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
 
-    // Wait for WAF token before doing anything (critical — search blocked without it)
-    const wafDeadline = Date.now() + 25000;
-    while (!wafToken && Date.now() < wafDeadline) await new Promise(r => setTimeout(r, 500));
+    // Wait for WAF token — no timeout, wait as long as it takes
+    // Token arrival means the session is trusted and search will succeed
+    while (!wafToken) await new Promise(r => setTimeout(r, 500));
 
-    // Extra settle time after WAF token
+    // Extra settle time after WAF token issues
     await new Promise(r => setTimeout(r, 3000));
 
     // Fill form and submit
@@ -535,11 +550,11 @@ app.get("/search-missingmoney", async (req, res) => {
     await page.close();
     await browser.close();
 
-    if (!apiData) return res.json({ found: false, entities: [], total: 0 });
+    if (!apiData) return null;
 
     // Parse the NAUPA SWS JSON response
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
-    if (properties.length === 0) return res.json({ found: false, entities: [], total: 0 });
+    if (properties.length === 0) return null;
 
     // Parse amount — MissingMoney uses range text (e.g. "$25 to $50", "Over $100")
     const parseAmt = (p) => {
@@ -573,16 +588,14 @@ app.get("/search-missingmoney", async (req, res) => {
     });
 
     const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    const result = { found: true, entities, total, count: properties.length };
-    searchCache.set(cacheKey, { result, ts: Date.now() });
-    return res.json(result);
+    return { found: true, entities, total, count: properties.length };
 
   } catch (err) {
-    console.error('[search-missingmoney] Error:', err.message);
+    console.error(`[search] attempt error: ${err.message.slice(0, 80)}`);
     if (browser) try { await browser.close(); } catch { /* */ }
-    return res.json({ found: false, entities: [], total: 0, error: err.message.slice(0, 80) });
+    return null;
   }
-});
+}
 
 // ---------------------------------------------------------------------------
 // Influencer tracking — unique short links per creator
