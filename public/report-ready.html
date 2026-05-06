@@ -210,7 +210,10 @@ tryRender = function() {
 function loadResults() {}
 
 function renderResults(data) {
-  const { entities, total, count } = data;
+  const { entities, total, matchedTotal, count } = data;
+  // Build display total: use matchedTotal if we have it, fall back to showing all
+  const displayTotal = matchedTotal > 0 ? matchedTotal : total;
+  const hasExactMatches = matchedTotal > 0;
   const card = document.getElementById('card');
 
   if (!entities || entities.length === 0) {
@@ -221,10 +224,10 @@ function renderResults(data) {
   gtag('event', 'view_item', { currency: 'USD', value: total });
 
   const entitiesHtml = entities.map(e => `
-    <div class="entity-row" style="flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px">
+    <div class="entity-row" style="flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;${e.isMatch ? 'border-left:3px solid #10b981;background:rgba(16,185,129,0.05)' : 'opacity:0.6'}">
       <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
-        <span class="entity-name" style="font-weight:600;color:#f1f5f9">${e.ownerName || (firstName+' '+lastName).toUpperCase()}</span>
-        <span class="entity-amt">${e.amtLabel}</span>
+        <span class="entity-name" style="font-weight:600;color:${e.isMatch ? '#f1f5f9' : '#94a3b8'}">${e.ownerName || (firstName+' '+lastName).toUpperCase()}</span>
+        <span class="entity-amt" style="color:${e.isMatch ? '#34d399' : '#64748b'}">${e.amtLabel}</span>
       </div>
       <div style="font-size:12px;color:#64748b">${e.name}${e.address ? ' &middot; ' + e.address : ''}${e.city ? ', ' + e.city + ', ' + e.state : ''}${e.zip ? ' ' + e.zip : ''}</div>
     </div>
@@ -240,8 +243,8 @@ function renderResults(data) {
     <div class="card-body">
       <div class="amount-box">
         <div>
-          <div class="amount-label">${count} records found in ${userState}</div>
-          <div class="amount-value" style="font-size:28px">Money Found</div>
+          <div class="amount-label">${hasExactMatches ? 'Estimated amount owed to ' + firstName + ' ' + lastName : count + ' total records found in ' + userState}</div>
+          <div class="amount-value" style="font-size:${hasExactMatches ? '32' : '22'}px">${hasExactMatches ? fmt(displayTotal) + '+' : 'Money Found'}</div>
         </div>
         <div class="emoji">💰</div>
       </div>

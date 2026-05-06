@@ -572,9 +572,17 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
       return { num, amtLabel };
     };
 
+    // Flag rows that match the visitor's exact name
+    const normalize = s => (s || '').trim().toUpperCase().replace(/\s+/g,' ');
+    const fullName = normalize(`${firstName} ${lastName}`);
+    const lastOnly = normalize(lastName);
+
     // Return page 1 exactly as MissingMoney shows it
     const entities = properties.slice(0, 20).map(p => {
       const { num, amtLabel } = parseAmt(p);
+      const owner = normalize(p.ownerName || '');
+      const isMatch = owner === fullName || owner === lastOnly ||
+                      owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
       return {
         ownerName: (p.ownerName || '').trim(),
         name:      (p.holderName || 'State Treasury').slice(0, 60),
@@ -584,11 +592,19 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
         zip:       (p.postalCode || '').trim(),
         amtLabel,
         amount: num,
+        isMatch,  // true = owner name matches visitor
       };
     });
 
+    // Sum only rows that match the visitor's name
+    const matchedProperties = properties.filter(p => {
+      const owner = normalize(p.ownerName || '');
+      return owner === fullName || owner === lastOnly ||
+             owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
+    });
+    const matchedTotal = matchedProperties.reduce((s, p) => s + (parseAmt(p).num), 0);
     const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    return { found: true, entities, total, count: properties.length };
+    return { found: true, entities, total, matchedTotal, count: properties.length };
 
   } catch (err) {
     console.error(`[search] attempt error: ${err.message.slice(0, 80)}`);
