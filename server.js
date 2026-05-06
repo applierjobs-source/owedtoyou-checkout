@@ -1029,7 +1029,28 @@ async function initReportRequests() {
 // Run CA data migration on startup (skips if already loaded)
 try { require('./migrate-ca-data').migrate(); } catch(e) { console.log('[migrate] Skipping:', e.message); }
 
-initDb().then(() => initPendingPayments()).then(() => initReportRequests()).catch(err => {
+async function initInfluencerLinks() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS influencer_links (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      influencer_name TEXT,
+      platform TEXT,
+      handle TEXT,
+      short_url TEXT,
+      clicks INT DEFAULT 0,
+      conversions INT DEFAULT 0,
+      revenue NUMERIC DEFAULT 0,
+      replied_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(err => console.error('[db] initInfluencerLinks error:', err.message));
+  // Add replied_at if missing (for existing tables)
+  await pool.query(`ALTER TABLE influencer_links ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ`)
+    .catch(() => {});
+}
+
+initDb().then(() => initPendingPayments()).then(() => initReportRequests()).then(() => initInfluencerLinks()).catch(err => {
   console.error("[db] initDb failed:", err.message);
 });
 
@@ -1252,5 +1273,159 @@ app.get('/pay/:claimId', async (req, res) => {
   } catch (err) {
     console.error('[pay] Error:', err.message);
     return res.status(500).send('Error creating payment link');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Influencer inbound reply handler (SendGrid Inbound Parse)
+// POST /influencer/reply
+// ---------------------------------------------------------------------------
+app.post('/influencer/reply', multer().none(), async (req, res) => {
+  try {
+    // SendGrid sends multipart form data
+    const from    = req.body.from    || '';
+    const to      = req.body.to      || '';
+    const subject = req.body.subject || '';
+    const text    = req.body.text    || req.body.html || '';
+
+    console.log(`[reply] From: ${from} | Subject: ${subject}`);
+
+    // Extract sender email
+    const emailMatch = from.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+    const senderEmail = emailMatch ? emailMatch[0].toLowerCase() : null;
+    if (!senderEmail) return res.sendStatus(200); // ignore unparseable
+
+    // Extract sender name
+    const nameMatch = from.match(/^"?([^"<]+)"?\s*</);
+    const senderName = nameMatch ? nameMatch[1].trim() : senderEmail.split('@')[0];
+    const firstName  = senderName.split(/[\s,]+/)[0];
+
+    // Look up creator in DB or log by email
+    let handle = senderEmail;
+    let trackingLink = null;
+
+    // Check if we already have a tracking link for this email
+    try {
+      const { rows } = await pool.query(
+        `SELECT handle, short_url FROM influencer_links WHERE LOWER(handle) LIKE $1 LIMIT 1`,
+        [`%${senderEmail}%`]
+      );
+      if (rows.length) {
+        handle = rows[0].handle;
+        trackingLink = rows[0].short_url;
+      }
+    } catch(e) {}
+
+    // Generate a fresh tracking link if we don't have one
+    if (!trackingLink) {
+      const crypto = require('crypto');
+      const code   = 'inf_' + crypto.randomBytes(3).toString('hex');
+      trackingLink = `https://www.owedtoyou.net/c/${code}`;
+      const destUrl = `https://www.owedtoyou.net/?ref=${code}`;
+      try {
+        await pool.query(
+          `INSERT INTO influencer_links (code, influencer_name, platform, handle, short_url)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT (code) DO NOTHING`,
+          [code, senderName, 'email', senderEmail, trackingLink]
+        );
+        const https2 = require('https');
+        const upstash = `${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent('link:'+code)}/${encodeURIComponent(destUrl)}`;
+        await new Promise((resolve) => {
+          https2.get(upstash, { headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` } }, resolve).on('error', resolve);
+        });
+      } catch(e) { console.error('[reply] tracking link error:', e.message); }
+    }
+
+    // ── 1. Reply to the creator ──────────────────────────────────────────────
+    const replyBody = `Hi ${firstName},
+
+Thanks for reaching out — excited to work with you!
+
+Here's your personal tracking link:
+${trackingLink}
+
+Use this link in your video and bio. Every time someone files a claim through it, you earn $5. We track it all on our end.
+
+Here's the brief:
+- Go to owedtoyou.net on camera
+- Type in your name and state
+- Show your results (most people find real money)
+- Drop your link in the caption/bio
+
+Once your video is posted, reply back with the link and we'll send your $50 within 24 hours via Venmo or Cash App — whichever you prefer.
+
+Any questions just reply here.
+
+Alex
+OwedToYou.net`;
+
+    const sgPayload = JSON.stringify({
+      personalizations: [{ to: [{ email: senderEmail }] }],
+      from: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
+      reply_to: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
+      subject: `Re: ${subject.startsWith('Re:') ? subject.slice(3).trim() : subject}`,
+      content: [{ type: 'text/plain', value: replyBody }]
+    });
+
+    const https3 = require('https');
+    await new Promise((resolve, reject) => {
+      const req2 = https3.request('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(sgPayload)
+        }
+      }, (r) => { r.resume(); resolve(); });
+      req2.on('error', reject);
+      req2.write(sgPayload);
+      req2.end();
+    });
+    console.log(`[reply] Sent tracking link to ${senderEmail}`);
+
+    // ── 2. Forward to Zach ───────────────────────────────────────────────────
+    const fwdBody = `--- Forwarded reply from ${from} ---
+Subject: ${subject}
+
+${text}
+
+---
+Tracking link sent: ${trackingLink}`;
+
+    const fwdPayload = JSON.stringify({
+      personalizations: [{ to: [{ email: 'owedtoyoucontact2@gmail.com' }] }],
+      from: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
+      reply_to: { email: senderEmail },
+      subject: `[Creator Reply] ${senderName} — ${subject}`,
+      content: [{ type: 'text/plain', value: fwdBody }]
+    });
+
+    await new Promise((resolve, reject) => {
+      const req3 = https3.request('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(fwdPayload)
+        }
+      }, (r) => { r.resume(); resolve(); });
+      req3.on('error', reject);
+      req3.write(fwdPayload);
+      req3.end();
+    });
+    console.log(`[reply] Forwarded to owedtoyoucontact2@gmail.com`);
+
+    // ── 3. Mark as replied in DB ─────────────────────────────────────────────
+    try {
+      await pool.query(
+        `UPDATE influencer_links SET replied_at = NOW() WHERE LOWER(handle) = $1`,
+        [senderEmail]
+      );
+    } catch(e) {}
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('[reply] webhook error:', err.message);
+    res.sendStatus(200); // always 200 to SendGrid
   }
 });
