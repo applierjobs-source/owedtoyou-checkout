@@ -130,31 +130,36 @@ function tryRender() {
   }
 }
 
-// Keep retrying until we get results or 5 attempts exhausted
-(async function fetchWithRetry() {
-  for (let i = 0; i < 5; i++) {
+// Poll /search-ready every 2s — fast, never times out, returns result when prefetch completes
+(async function pollForResults() {
+  const baseUrl = '/search-ready?firstName=' + encodeURIComponent(firstName) +
+    '&lastName=' + encodeURIComponent(lastName) +
+    '&state=' + encodeURIComponent(userState) +
+    '&city=' + encodeURIComponent(userCity);
+
+  const started = Date.now();
+  while (true) {
     try {
-      const r = await fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
-        '&lastName=' + encodeURIComponent(lastName) +
-        '&state=' + encodeURIComponent(userState) +
-        '&city=' + encodeURIComponent(userCity));
+      const r = await fetch(baseUrl);
       const d = await r.json();
-      if (d.found || (i === 4)) {
+      if (d.ready) {
         resultsData = d;
         fetchDone = true;
-        // If SSE hasn't fired 100% yet, force animDone so we don't wait forever
-        if (!animDone) {
-          barEl.style.width = '100%';
-          animDone = true;
-        }
+        if (!animDone) { barEl.style.width = '100%'; animDone = true; }
         tryRender();
         return;
       }
-      // Not found yet but server said retry — try again immediately
-      console.log('Search attempt ' + (i+1) + ' empty, retrying...');
-    } catch (e) {
-      if (i === 4) { resultsData = { found: false, entities: [], total: 0 }; fetchDone = true; tryRender(); return; }
+    } catch(e) {}
+
+    // Timeout after 3 minutes
+    if (Date.now() - started > 180000) {
+      resultsData = { found: false, entities: [], total: 0 };
+      fetchDone = true;
+      if (!animDone) { animDone = true; }
+      tryRender();
+      return;
     }
+    await new Promise(r => setTimeout(r, 2000));
   }
 })();
 

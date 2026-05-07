@@ -522,6 +522,27 @@ app.get('/search-progress', (req, res) => {
   });
 });
 
+// Lightweight poll endpoint — returns cached result if ready, else {ready:false}
+// Frontend polls this every 2s instead of waiting on a long-running request
+app.get('/search-ready', async (req, res) => {
+  const { firstName, lastName, state: userState, city: userCity } = req.query;
+  if (!firstName || !lastName) return res.json({ ready: false });
+  const state = (userState || 'TX').trim().toUpperCase();
+  const city = (userCity || '').trim().toUpperCase();
+  const cacheKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}|${city.toLowerCase()}`;
+
+  const mem = searchCache.get(cacheKey);
+  if (mem) return res.json({ ready: true, ...mem.result });
+
+  const redis = await redisCacheGet(cacheKey).catch(() => null);
+  if (redis) {
+    searchCache.set(cacheKey, { result: redis, ts: Date.now() });
+    return res.json({ ready: true, ...redis });
+  }
+
+  return res.json({ ready: false });
+});
+
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState, city: userCity } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
@@ -548,20 +569,19 @@ app.get("/search-missingmoney", async (req, res) => {
     return res.json(redisCached);
   }
 
-  // Retry loop — keep trying until we get results, up to 5 attempts
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  // Run search — respond as soon as result arrives (no Railway timeout issue
+  // since prefetch runs it async; this path is hit if cache missed)
+  for (let attempt = 1; attempt <= 3; attempt++) {
     const result = await attemptMissingMoneySearch(firstName, lastName, state, city, attempt);
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
       redisCacheSet(cacheKey, result).catch(() => {});
-      // Emit 100% to any listening SSE clients
       emitProgress(cacheKey, 100, 'Done!');
       progressEmitters.delete(cacheKey);
       return res.json(result);
     }
     console.log(`[search] Attempt ${attempt} failed — retrying...`);
   }
-  // All attempts failed — return empty but don't say no funds
   return res.json({ found: false, entities: [], total: 0, retry: true });
 });
 
@@ -875,9 +895,28 @@ app.post('/prefetch-search', (req, res) => {
   const { firstName, lastName, state, city } = req.body;
   if (!firstName || !lastName) return res.json({ ok: false });
   res.json({ ok: true }); // respond immediately
-  // Fire search in background — result lands in cache
-  const url = `http://localhost:${process.env.PORT || 3000}/search-missingmoney?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&state=${encodeURIComponent(state || 'TX')}&city=${encodeURIComponent(city || '')}`;
-  require('http').get(url).on('error', () => {});
+
+  const st = (state || 'TX').trim().toUpperCase();
+  const ct = (city || '').trim().toUpperCase();
+  const cacheKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${st}|${ct.toLowerCase()}`;
+
+  // Skip if already cached
+  if (searchCache.get(cacheKey)) return;
+
+  // Run search directly (not via HTTP) so Railway 30s timeout doesn't kill it
+  (async () => {
+    try {
+      const result = await attemptMissingMoneySearch(firstName, lastName, st, ct, 1);
+      if (result) {
+        searchCache.set(cacheKey, { result, ts: Date.now() });
+        redisCacheSet(cacheKey, result).catch(() => {});
+        emitProgress(cacheKey, 100, 'Done!');
+        progressEmitters.delete(cacheKey);
+      }
+    } catch(e) {
+      console.error('[prefetch] error:', e.message);
+    }
+  })();
 });
 
 // POST /generate-report — homepage form submission
