@@ -138,6 +138,7 @@ function tryRender() {
     '&city=' + encodeURIComponent(userCity);
 
   const started = Date.now();
+  let triggeredFallback = false;
   while (true) {
     try {
       const r = await fetch(baseUrl);
@@ -150,6 +151,17 @@ function tryRender() {
         return;
       }
     } catch(e) {}
+
+    // After 35s with no result, trigger a direct search as fallback
+    // (handles case where prefetch failed silently)
+    if (!triggeredFallback && Date.now() - started > 35000) {
+      triggeredFallback = true;
+      fetch('/prefetch-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, state: userState, city: userCity })
+      }).catch(() => {});
+    }
 
     // Timeout after 3 minutes
     if (Date.now() - started > 180000) {

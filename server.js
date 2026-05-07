@@ -900,19 +900,24 @@ app.post('/prefetch-search', (req, res) => {
   // Skip if already cached
   if (searchCache.get(cacheKey)) return;
 
-  // Run search directly (not via HTTP) so Railway 30s timeout doesn't kill it
+  // Run search directly — retry up to 3x if it fails
   (async () => {
-    try {
-      const result = await attemptMissingMoneySearch(firstName, lastName, st, ct, 1);
-      if (result) {
-        searchCache.set(cacheKey, { result, ts: Date.now() });
-        redisCacheSet(cacheKey, result).catch(() => {});
-        emitProgress(cacheKey, 100, 'Done!');
-        progressEmitters.delete(cacheKey);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const result = await attemptMissingMoneySearch(firstName, lastName, st, ct, attempt);
+        if (result) {
+          searchCache.set(cacheKey, { result, ts: Date.now() });
+          redisCacheSet(cacheKey, result).catch(() => {});
+          emitProgress(cacheKey, 100, 'Done!');
+          progressEmitters.delete(cacheKey);
+          return;
+        }
+        console.log(`[prefetch] attempt ${attempt} failed, retrying...`);
+      } catch(e) {
+        console.error(`[prefetch] attempt ${attempt} error:`, e.message);
       }
-    } catch(e) {
-      console.error('[prefetch] error:', e.message);
     }
+    console.error('[prefetch] all 3 attempts failed for', firstName, lastName, st);
   })();
 });
 
