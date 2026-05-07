@@ -661,14 +661,11 @@ async function attemptMissingMoneySearch(firstName, lastName, state, city, attem
     while (!wafToken) await new Promise(r => setTimeout(r, 500));
     emitProgress(progressKey, 60, 'Session verified, searching records...');
 
-    // Extra settle time after WAF token issues
-    await new Promise(r => setTimeout(r, 3000));
 
     // Fill form and submit
     await typeInto('#lastNameTop, input[name*="lastName"]', lastName.trim());
     await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
     try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all states */ }
-    await new Promise(r => setTimeout(r, 1000));
     emitProgress(progressKey, 75, 'Querying state records...');
     await page.keyboard.press('Enter');
 
