@@ -490,8 +490,9 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
 
     // Intercept the POST to /SWS/properties and inject the correct state
     let apiData = null;
-    await page.route('https://missingmoney.com/SWS/properties', async route => {
+    await page.route('**/SWS/properties', async route => {
       try {
+        if (route.request().method() !== 'POST') { await route.continue(); return; }
         const orig = route.request().postData();
         const parsed = JSON.parse(orig);
         parsed.state = state; // inject user's state
@@ -502,7 +503,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Only capture the POST response (not the initial GET)
     page.on('response', async (resp) => {
       try {
-        if (resp.url() === 'https://missingmoney.com/SWS/properties' && !apiData) {
+        if (resp.url().includes('/SWS/properties') && resp.request().method() === 'POST' && !apiData) {
           const body = await resp.json().catch(() => null);
           if (body && (body.properties || Array.isArray(body))) {
             apiData = body;
@@ -514,7 +515,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const typeInto = async (sel, val) => {
       const el = await page.$(sel);
       if (!el) return;
-      await el.click(); await el.fill(''); await el.type(val, { delay: 40 });
+      await el.click();
+      await el.fill(val);
       await page.evaluate(el => {
         el.dispatchEvent(new Event('input', { bubbles:true }));
         el.dispatchEvent(new Event('change', { bubbles:true }));
