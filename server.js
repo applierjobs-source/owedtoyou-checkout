@@ -554,12 +554,13 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     };
     const stateFullName = STATE_NAMES[state] || state;
     try {
-      // Try value (abbreviation) first, then label (full name)
-      await page.selectOption('select[id*="state"], #stateTop', { value: state }).catch(() =>
-        page.selectOption('select[id*="state"], #stateTop', { label: stateFullName })
-      );
-    } catch(e) {
-      console.log(`[search] State select failed for ${state}, searching all states:`, e.message);
+      await page.selectOption('select[id*="state"], #stateTop', state);
+    } catch {
+      try {
+        await page.selectOption('select[id*="state"], #stateTop', stateFullName);
+      } catch(e) {
+        console.log(`[search] State select failed for ${state}:`, e.message);
+      }
     }
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
