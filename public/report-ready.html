@@ -191,7 +191,17 @@ evtSource.onmessage = (e) => {
     if (pct >= 100) {
       evtSource.close();
       animDone = true;
+      // If fetch already resolved, render now
+      // If not yet, tryRender will fire again when fetch completes
       tryRender();
+      // Safety: if fetchDone never fires, wait 3s then render whatever we have
+      setTimeout(() => {
+        if (!fetchDone) {
+          fetchDone = true;
+          resultsData = resultsData || { found: false, entities: [], total: 0 };
+        }
+        tryRender();
+      }, 3000);
     }
   } catch {}
 };
