@@ -939,40 +939,10 @@ app.post("/generate-report", async (req, res) => {
     // Generate report async (after response sent)
     setImmediate(async () => {
       try {
-        const { generateReportHTML, searchUnclaimedProperty, SETTLEMENTS } = require('./report-generator');
-        const { htmlToPdf } = require('./report-pdf');
-        const { sendReportEmail } = require('./fulfillment');
-
-        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-        // Search unclaimed property
-        const unclaimedRecords = await searchUnclaimedProperty(firstName, lastName, state);
-
-        // All settlements apply to general population
-        const matchedSettlements = SETTLEMENTS;
-
-        // Generate HTML
-        const html = generateReportHTML({
-          firstName, lastName, city, state,
-          unclaimedRecords, settlements: matchedSettlements, reportDate
-        });
-
-        // Convert to PDF using fast PDFKit (no browser)
-        const pdfData = { firstName, lastName, city, state, unclaimedRecords, settlements: matchedSettlements, federalSources: require('./report-generator').FEDERAL_SOURCES, reportDate };
-        const pdfBuffer = await htmlToPdf(html, pdfData);
-
-        // Email PDF
-        await sendReportEmail(email.trim(), firstName.trim(), pdfBuffer);
-
-        // Update DB status
-        pool.query(
-          `UPDATE report_requests SET status='sent' WHERE email=$1 AND first_name=$2`,
-          [email.trim(), firstName.trim()]
-        ).catch(() => {});
-
-        console.log(`[generate-report] Report sent to ${email}`);
+        // PDF report email removed — users see results on report-ready page directly
+        console.log(`[generate-report] Lead captured: ${firstName} ${lastName} <${email}>`);
       } catch(err) {
-        console.error('[generate-report] Async generation error:', err.message);
+        console.error('[generate-report] error:', err.message);
       }
     });
 
