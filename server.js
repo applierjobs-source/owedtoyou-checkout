@@ -488,13 +488,21 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const context = browser.contexts()[0] || await browser.newContext();
     const page = await context.newPage();
 
-    // Intercept the search results JSON from MissingMoney's SWS API
+    // Intercept the POST to /SWS/properties and inject the correct state
     let apiData = null;
+    await page.route('https://missingmoney.com/SWS/properties', async route => {
+      try {
+        const orig = route.request().postData();
+        const parsed = JSON.parse(orig);
+        parsed.state = state; // inject user's state
+        await route.continue({ postData: JSON.stringify(parsed) });
+      } catch { await route.continue(); }
+    });
+
+    // Only capture the POST response (not the initial GET)
     page.on('response', async (resp) => {
       try {
-        const url = resp.url();
-        const ct = resp.headers()['content-type'] || '';
-        if (ct.includes('json') && url.includes('/SWS/') && url.includes('properties') && !apiData) {
+        if (resp.url() === 'https://missingmoney.com/SWS/properties' && !apiData) {
           const body = await resp.json().catch(() => null);
           if (body && (body.properties || Array.isArray(body))) {
             apiData = body;
