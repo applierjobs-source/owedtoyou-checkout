@@ -499,6 +499,18 @@ app.get('/search-progress', (req, res) => {
 
   emit(5, 'Connecting to search engine...');
 
+  // If result is already cached (prefetch completed), emit 100% immediately
+  const memHit = searchCache.get(key);
+  if (memHit) {
+    emit(100, 'Done!');
+    res.end();
+    return;
+  }
+  // Also check Redis
+  redisCacheGet(key).then(redisHit => {
+    if (redisHit) { emit(100, 'Done!'); res.end(); }
+  }).catch(() => {});
+
   // Register this SSE connection so the search function can push to it
   if (!progressEmitters.has(key)) progressEmitters.set(key, []);
   progressEmitters.get(key).push(emit);

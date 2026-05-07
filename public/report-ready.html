@@ -151,31 +151,15 @@ function tryRender() {
   }
 })();
 
-// Extended steps shown if search takes longer than initial animation
-const EXTENDED_STEPS = [
-  'Cross-referencing federal databases...',
-  'Checking IRS unclaimed refunds...',
-  'Scanning Social Security records...',
-  'Verifying property transfers...',
-  'Checking unclaimed wages...',
-  'Reviewing insurance records...',
-  'Finalizing results...'
-];
-
-// After initial steps finish, keep adding items every 6s so screen never looks frozen
+// Fallback ticker — only fires if SSE stalls (shows a heartbeat so screen doesn't look frozen)
 setTimeout(() => {
-  if (fetchDone) return; // already done, don't bother
-  let extIdx = 0;
-  const extInterval = setInterval(() => {
-    if (fetchDone) { clearInterval(extInterval); return; }
-    if (extIdx >= EXTENDED_STEPS.length) extIdx = 0; // loop if needed
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
-    div.innerHTML = `<span style="color:#f59e0b">&#9679;</span><span>${EXTENDED_STEPS[extIdx++]}</span>`;
-    stepsEl.appendChild(div);
-    stepsEl.scrollTop = stepsEl.scrollHeight;
-  }, 6000);
-}, 20000);
+  if (animDone) return;
+  const ticker = setInterval(() => {
+    if (animDone) { clearInterval(ticker); return; }
+    const pct = Math.min(99, parseInt(barEl.style.width || '0') + 2);
+    barEl.style.width = pct + '%';
+  }, 3000);
+}, 15000);
 
 // Drive progress bar from real server-sent events
 const sseUrl = '/search-progress?firstName=' + encodeURIComponent(firstName) +
