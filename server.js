@@ -1384,19 +1384,26 @@ OwedToYou.net`;
     console.log(`[reply] Sent tracking link to ${senderEmail}`);
 
     // ── 2. Forward to Zach ───────────────────────────────────────────────────
-    const fwdBody = `--- Forwarded reply from ${from} ---
+    const fwdBody = `A creator just replied to your outreach.
+
+From: ${from}
+Reply to: ${senderEmail}
 Subject: ${subject}
 
+--- Their message ---
 ${text}
 
----
-Tracking link sent: ${trackingLink}`;
+--- Auto-response sent ---
+Tracking link delivered: ${trackingLink}
+They were told to post the video and reply back with the link to receive $50 via Venmo/Cash App.
+
+Hit reply on this email to respond directly to ${senderName}.`;
 
     const fwdPayload = JSON.stringify({
-      personalizations: [{ to: [{ email: 'owedtoyoucontact2@gmail.com' }] }],
+      personalizations: [{ to: [{ email: 'zacharrow3@gmail.com' }, { email: 'owedtoyoucontact2@gmail.com' }] }],
       from: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
       reply_to: { email: senderEmail },
-      subject: `[Creator Reply] ${senderName} — ${subject}`,
+      subject: `🔔 Creator Reply: ${senderName} responded to your outreach`,
       content: [{ type: 'text/plain', value: fwdBody }]
     });
 
