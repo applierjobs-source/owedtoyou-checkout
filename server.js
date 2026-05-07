@@ -1352,7 +1352,7 @@ Here's the brief:
 - Show your results (most people find real money)
 - Drop your link in the caption/bio
 
-Once your video is posted, reply back with the link and we'll send your $100 within 24 hours via Venmo or Cash App — whichever you prefer.
+Once your video is posted, reply back with the link and we'll send your $200 within 24 hours via Venmo or Cash App — whichever you prefer.
 
 Any questions just reply here.
 
@@ -1395,7 +1395,7 @@ ${text}
 
 --- Auto-response sent ---
 Tracking link delivered: ${trackingLink}
-They were told to post the video and reply back with the link to receive $100 via Venmo/Cash App.
+They were told to post the video and reply back with the link to receive $200 via Venmo/Cash App.
 
 Hit reply on this email to respond directly to ${senderName}.`;
 
