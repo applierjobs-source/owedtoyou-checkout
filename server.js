@@ -464,8 +464,8 @@ app.get("/search-missingmoney", async (req, res) => {
     return res.json(cached.result);
   }
 
-  // Retry loop — keep trying until we get results, up to 5 attempts
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  // Retry loop — 2 attempts max (frontend also retries)
+  for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await attemptMissingMoneySearch(firstName, lastName, state, attempt);
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
@@ -529,10 +529,10 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Load homepage
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
 
-    // Wait for WAF token — up to 60s
-    const wafDeadline = Date.now() + 60000;
+    // Wait for WAF token — up to 30s
+    const wafDeadline = Date.now() + 30000;
     while (!wafToken && Date.now() < wafDeadline) await new Promise(r => setTimeout(r, 500));
-    if (!wafToken) console.log(`[search] WAF token never arrived, proceeding anyway`);
+    if (!wafToken) console.log(`[search] WAF token never arrived after 30s, proceeding anyway`);
 
     // Extra settle time after WAF token issues
     await new Promise(r => setTimeout(r, 3000));
@@ -544,8 +544,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
 
-    // Wait up to 45s for results
-    const deadline = Date.now() + 45000;
+    // Wait up to 30s for results
+    const deadline = Date.now() + 30000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
     }
@@ -581,12 +581,12 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
-    // Filter results to the requested state first, fall back to all if none match
+    // Filter by state, fall back to all if no state matches
     const stateFiltered = properties.filter(p => (p.state || '').trim().toUpperCase() === state);
     const resultSet = stateFiltered.length > 0 ? stateFiltered : properties;
-    if (stateFiltered.length === 0) console.log(`[search] No state-specific results for ${state}, showing all`);
+    console.log(`[search] ${properties.length} total, ${stateFiltered.length} in ${state}, using ${resultSet.length}`);
 
-    // Return page 1 exactly as MissingMoney shows it
+    // Return page 1
     const entities = resultSet.slice(0, 20).map(p => {
       const { num, amtLabel } = parseAmt(p);
       const owner = normalize(p.ownerName || '');
