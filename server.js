@@ -1361,8 +1361,8 @@ OwedToYou.net`;
 
     const sgPayload = JSON.stringify({
       personalizations: [{ to: [{ email: senderEmail }] }],
-      from: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
-      reply_to: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
+      from: { email: 'partnerships@owedtoyou.net', name: 'Alex' },
+      reply_to: { email: 'partnerships@owedtoyou.net', name: 'Alex' },
       subject: `Re: ${subject.startsWith('Re:') ? subject.slice(3).trim() : subject}`,
       content: [{ type: 'text/plain', value: replyBody }]
     });
@@ -1401,7 +1401,7 @@ Hit reply on this email to respond directly to ${senderName}.`;
 
     const fwdPayload = JSON.stringify({
       personalizations: [{ to: [{ email: 'zacharrow3@gmail.com' }, { email: 'owedtoyoucontact2@gmail.com' }] }],
-      from: { email: 'partnerships@owedtoyou.net', name: 'Alex at OwedToYou' },
+      from: { email: 'partnerships@owedtoyou.net', name: 'Alex' },
       reply_to: { email: senderEmail },
       subject: `🔔 Creator Reply: ${senderName} responded to your outreach`,
       content: [{ type: 'text/plain', value: fwdBody }]
