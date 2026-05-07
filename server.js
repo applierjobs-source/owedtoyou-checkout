@@ -652,10 +652,15 @@ async function attemptMissingMoneySearch(firstName, lastName, state, city, attem
     emitProgress(progressKey, 75, 'Querying state records...');
     await page.keyboard.press('Enter');
 
-    // Wait up to 45s for results
+    // Wait up to 45s for results, nudging progress bar every 3s so it never looks frozen
     const deadline = Date.now() + 45000;
+    let progressPct = 76;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
+      if (Date.now() % 3000 < 500 && progressPct < 89) {
+        progressPct = Math.min(89, progressPct + 2);
+        emitProgress(progressKey, progressPct, null);
+      }
     }
     if (apiData) emitProgress(progressKey, 90, 'Compiling your results...');
 
