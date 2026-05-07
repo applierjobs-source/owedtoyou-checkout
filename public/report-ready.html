@@ -260,7 +260,7 @@ function renderResults(data) {
     </div>
   `).join('');
 
-  const totalRow = `<div class="entity-total"><span>+ ${count - 20} more records found</span><span></span></div>`;
+  const totalRow = count > 10 ? `<div class="entity-total"><span>Showing top 10 of ${count} records found</span><span></span></div>` : '';
 
   card.innerHTML = `
     <div class="card-header">
