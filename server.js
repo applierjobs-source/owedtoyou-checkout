@@ -478,6 +478,37 @@ async function redisCacheSet(key, value) {
   });
 }
 
+// SSE progress emitters keyed by cacheKey
+const progressEmitters = new Map();
+
+// GET /search-progress?firstName=&lastName=&state= — SSE stream of search milestones
+app.get('/search-progress', (req, res) => {
+  const { firstName, lastName, state: userState } = req.query;
+  if (!firstName || !lastName) { res.end(); return; }
+  const state = (userState || 'TX').trim().toUpperCase();
+  const key = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const emit = (pct, label) => {
+    res.write(`data: ${JSON.stringify({ pct, label })}\n\n`);
+  };
+
+  emit(5, 'Connecting to search engine...');
+
+  // Register this SSE connection so the search function can push to it
+  if (!progressEmitters.has(key)) progressEmitters.set(key, []);
+  progressEmitters.get(key).push(emit);
+
+  req.on('close', () => {
+    const emitters = progressEmitters.get(key) || [];
+    progressEmitters.set(key, emitters.filter(e => e !== emit));
+  });
+});
+
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
@@ -509,6 +540,9 @@ app.get("/search-missingmoney", async (req, res) => {
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
       redisCacheSet(cacheKey, result).catch(() => {});
+      // Emit 100% to any listening SSE clients
+      emitProgress(cacheKey, 100, 'Done!');
+      progressEmitters.delete(cacheKey);
       return res.json(result);
     }
     console.log(`[search] Attempt ${attempt} failed — retrying...`);
@@ -517,7 +551,13 @@ app.get("/search-missingmoney", async (req, res) => {
   return res.json({ found: false, entities: [], total: 0, retry: true });
 });
 
+function emitProgress(key, pct, label) {
+  const emitters = progressEmitters.get(key) || [];
+  emitters.forEach(emit => { try { emit(pct, label); } catch {} });
+}
+
 async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
+  const progressKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
 
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
   // proxy_country=us routes through US residential IPs — required to bypass MissingMoney CloudFront block
@@ -527,6 +567,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
   try {
     const { chromium } = require('playwright-core');
     browser = await chromium.connectOverCDP(WSS);
+    emitProgress(progressKey, 15, 'Connected to search engine...');
     const context = browser.contexts()[0] || await browser.newContext();
     const page = await context.newPage();
 
@@ -577,10 +618,13 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     });
 
     // Load homepage
+    emitProgress(progressKey, 25, 'Loading unclaimed property database...');
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
+    emitProgress(progressKey, 40, 'Database loaded, verifying session...');
 
     // Wait for WAF token — no timeout, wait as long as it takes
     while (!wafToken) await new Promise(r => setTimeout(r, 500));
+    emitProgress(progressKey, 60, 'Session verified, searching records...');
 
     // Extra settle time after WAF token issues
     await new Promise(r => setTimeout(r, 3000));
@@ -590,6 +634,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
     try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all states */ }
     await new Promise(r => setTimeout(r, 1000));
+    emitProgress(progressKey, 75, 'Querying state records...');
     await page.keyboard.press('Enter');
 
     // Wait up to 45s for results
@@ -597,6 +642,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
     }
+    if (apiData) emitProgress(progressKey, 90, 'Compiling your results...');
 
     await page.close();
     await browser.close();

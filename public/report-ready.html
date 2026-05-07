@@ -177,36 +177,51 @@ setTimeout(() => {
   }, 6000);
 }, 20000);
 
-// Steps animate over 20s, bar holds at 95% until fetch completes (MM takes ~50s)
-const stepDelay = 18000 / SCAN_STEPS.length;
-SCAN_STEPS.forEach((label, i) => {
-  setTimeout(() => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
-    div.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + label + '</span>';
-    stepsEl.appendChild(div);
-    barEl.style.width = ((i + 1) / SCAN_STEPS.length * 92) + '%';
-  }, i * stepDelay);
-});
+// Drive progress bar from real server-sent events
+const sseUrl = '/search-progress?firstName=' + encodeURIComponent(firstName) +
+  '&lastName=' + encodeURIComponent(lastName) +
+  '&state=' + encodeURIComponent(userState);
 
-// Show results after 15 seconds (or immediately if search finished early)
-// After 13s hold bar at 95% — jumps to 100% only when fetch completes
-setTimeout(() => {
-  barEl.style.width = '95%';
-  animDone = true;
-  tryRender(); // render immediately if fetch already done
-}, 20000);
-
-// Override tryRender to also push bar to 100% when both are ready
-const _tryRender = tryRender;
-tryRender = function() {
-  if (fetchDone && animDone) {
-    barEl.style.width = '100%';
-    setTimeout(_tryRender, 300);
+const evtSource = new EventSource(sseUrl);
+evtSource.onmessage = (e) => {
+  try {
+    const { pct, label } = JSON.parse(e.data);
+    barEl.style.width = pct + '%';
+    if (label) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
+      div.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + label + '</span>';
+      stepsEl.appendChild(div);
+      stepsEl.scrollTop = stepsEl.scrollHeight;
+    }
+    if (pct >= 100) {
+      evtSource.close();
+      animDone = true;
+      tryRender();
+    }
+  } catch {}
+};
+evtSource.onerror = () => {
+  // SSE failed — fall back to fake timer
+  evtSource.close();
+  if (!animDone) {
+    barEl.style.width = '95%';
+    animDone = true;
+    tryRender();
   }
 };
 
-// Keep loadResults as no-op (results now shown via timeout above)
+// Fallback: if SSE never connects within 60s, force render
+setTimeout(() => {
+  if (!animDone) {
+    evtSource.close();
+    barEl.style.width = '99%';
+    animDone = true;
+    tryRender();
+  }
+}, 60000);
+
+// Keep loadResults as no-op
 function loadResults() {}
 
 function renderResults(data) {
