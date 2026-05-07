@@ -538,8 +538,6 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
         const orig = route.request().postData();
         const parsed = JSON.parse(orig);
         parsed.state = state;
-        parsed.pageSize = 10;
-        parsed.page = 1;
         await route.continue({ postData: JSON.stringify(parsed) });
       } catch { await route.continue(); }
     });
@@ -655,9 +653,9 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
       return owner === fullName || owner === lastOnly ||
              owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
     });
+    // Sum ALL matching records (not just displayed 10) for a complete total
     const matchedTotal = matchedProperties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    // Total = sum of displayed rows only (not all 1000 from API)
-    const total = entities.reduce((s, e) => s + (e.amount || 0), 0);
+    const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
     return { found: true, entities, total, matchedTotal, count: properties.length };
 
   } catch (err) {
