@@ -529,9 +529,10 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Load homepage
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
 
-    // Wait for WAF token — no timeout, wait as long as it takes
-    // Token arrival means the session is trusted and search will succeed
-    while (!wafToken) await new Promise(r => setTimeout(r, 500));
+    // Wait for WAF token — up to 60s
+    const wafDeadline = Date.now() + 60000;
+    while (!wafToken && Date.now() < wafDeadline) await new Promise(r => setTimeout(r, 500));
+    if (!wafToken) console.log(`[search] WAF token never arrived, proceeding anyway`);
 
     // Extra settle time after WAF token issues
     await new Promise(r => setTimeout(r, 3000));
@@ -552,10 +553,11 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     await page.close();
     await browser.close();
 
-    if (!apiData) return null;
+    if (!apiData) { console.log(`[search] apiData never arrived`); return null; }
 
     // Parse the NAUPA SWS JSON response
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
+    console.log(`[search] Got ${properties.length} properties from MissingMoney`);
     if (properties.length === 0) return null;
 
     // Parse amount — MissingMoney uses range text (e.g. "$25 to $50", "Over $100")
