@@ -656,7 +656,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
              owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
     });
     const matchedTotal = matchedProperties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
+    // Total = sum of displayed rows only (not all 1000 from API)
+    const total = entities.reduce((s, e) => s + (e.amount || 0), 0);
     return { found: true, entities, total, matchedTotal, count: properties.length };
 
   } catch (err) {
