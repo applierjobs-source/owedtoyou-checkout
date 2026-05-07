@@ -495,7 +495,9 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
         if (route.request().method() !== 'POST') { await route.continue(); return; }
         const orig = route.request().postData();
         const parsed = JSON.parse(orig);
-        parsed.state = state; // inject user's state
+        parsed.state = state;
+        parsed.pageSize = 10;
+        parsed.page = 1;
         await route.continue({ postData: JSON.stringify(parsed) });
       } catch { await route.continue(); }
     });
@@ -586,8 +588,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
-    // Return page 1 exactly as MissingMoney shows it
-    const entities = properties.slice(0, 20).map(p => {
+    // Return first 10 only — faster render
+    const entities = properties.slice(0, 10).map(p => {
       const { num, amtLabel } = parseAmt(p);
       const owner = normalize(p.ownerName || '');
       const isMatch = owner === fullName || owner === lastOnly ||
