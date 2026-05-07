@@ -447,6 +447,37 @@ const STATE_SEARCH_CONFIG = {
 const searchCache = new Map();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
+// Redis cache helpers — persist search results across deploys
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL || 'https://measured-bee-91756.upstash.io';
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || 'gQAAAAAAAWZsAAIncDE1NDE2YzA3MDE2MGU0MjgxOWIxMGQzMGNkNjhmNzFmNnAxOTE3NTY';
+const https = require('https');
+
+async function redisCacheGet(key) {
+  return new Promise((resolve) => {
+    const req = https.request(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+    }, res => {
+      let d = ''; res.on('data', c => d += c); res.on('end', () => {
+        try { const r = JSON.parse(d); resolve(r.result ? JSON.parse(r.result) : null); } catch { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.end();
+  });
+}
+
+async function redisCacheSet(key, value) {
+  const body = JSON.stringify(['SET', key, JSON.stringify(value), 'EX', 86400]);
+  return new Promise((resolve) => {
+    const req = https.request(UPSTASH_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res => { res.resume(); resolve(); });
+    req.on('error', () => resolve());
+    req.write(body); req.end();
+  });
+}
+
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
@@ -455,11 +486,21 @@ app.get("/search-missingmoney", async (req, res) => {
   const config = STATE_SEARCH_CONFIG[state] || STATE_SEARCH_CONFIG['TX'];
 
   // Serve cached result if fresh
-  const cacheKey = `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
-  const cached = searchCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    console.log(`[search] cache hit: ${cacheKey}`);
-    return res.json(cached.result);
+  const cacheKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+
+  // Check in-memory cache first (fastest)
+  const memCached = searchCache.get(cacheKey);
+  if (memCached && Date.now() - memCached.ts < CACHE_TTL) {
+    console.log(`[search] memory cache hit`);
+    return res.json(memCached.result);
+  }
+
+  // Check Redis cache (persists across deploys)
+  const redisCached = await redisCacheGet(cacheKey);
+  if (redisCached) {
+    console.log(`[search] redis cache hit`);
+    searchCache.set(cacheKey, { result: redisCached, ts: Date.now() });
+    return res.json(redisCached);
   }
 
   // Retry loop — keep trying until we get results, up to 5 attempts
@@ -467,6 +508,7 @@ app.get("/search-missingmoney", async (req, res) => {
     const result = await attemptMissingMoneySearch(firstName, lastName, state, attempt);
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
+      redisCacheSet(cacheKey, result).catch(() => {});
       return res.json(result);
     }
     console.log(`[search] Attempt ${attempt} failed — retrying...`);
