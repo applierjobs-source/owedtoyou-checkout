@@ -137,9 +137,14 @@ function tryRender() {
         '&lastName=' + encodeURIComponent(lastName) +
         '&state=' + encodeURIComponent(userState));
       const d = await r.json();
-      if (d.found || (i === 4)) { // accept result on last attempt regardless
+      if (d.found || (i === 4)) {
         resultsData = d;
         fetchDone = true;
+        // If SSE hasn't fired 100% yet, force animDone so we don't wait forever
+        if (!animDone) {
+          barEl.style.width = '100%';
+          animDone = true;
+        }
         tryRender();
         return;
       }
@@ -167,11 +172,16 @@ const sseUrl = '/search-progress?firstName=' + encodeURIComponent(firstName) +
   '&state=' + encodeURIComponent(userState);
 
 const evtSource = new EventSource(sseUrl);
+const seenLabels = new Set();
 evtSource.onmessage = (e) => {
   try {
     const { pct, label } = JSON.parse(e.data);
-    barEl.style.width = pct + '%';
-    if (label) {
+    // Always advance bar forward, never backward
+    const curPct = parseInt(barEl.style.width || '0');
+    if (pct > curPct) barEl.style.width = pct + '%';
+    // Dedupe step labels
+    if (label && label !== 'Done!' && !seenLabels.has(label)) {
+      seenLabels.add(label);
       const div = document.createElement('div');
       div.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8;animation:fadeUp 0.3s ease';
       div.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + label + '</span>';
