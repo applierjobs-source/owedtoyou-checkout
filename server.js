@@ -445,9 +445,7 @@ const STATE_SEARCH_CONFIG = {
 
 // In-memory cache: key = "first|last|state", value = { result, ts }
 const searchCache = new Map();
-// Cache TTL reduced to 1h to ensure state-filtered results don't linger
-const CACHE_TTL_MS = 60 * 60 * 1000;
-const CACHE_TTL = CACHE_TTL_MS;
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
@@ -464,8 +462,8 @@ app.get("/search-missingmoney", async (req, res) => {
     return res.json(cached.result);
   }
 
-  // Retry loop — 2 attempts max (frontend also retries)
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  // Retry loop — keep trying until we get results, up to 5 attempts
+  for (let attempt = 1; attempt <= 5; attempt++) {
     const result = await attemptMissingMoneySearch(firstName, lastName, state, attempt);
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
@@ -529,10 +527,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Load homepage
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
 
-    // Wait for WAF token — up to 30s
-    const wafDeadline = Date.now() + 30000;
-    while (!wafToken && Date.now() < wafDeadline) await new Promise(r => setTimeout(r, 500));
-    if (!wafToken) console.log(`[search] WAF token never arrived after 30s, proceeding anyway`);
+    // Wait for WAF token — no timeout, wait as long as it takes
+    while (!wafToken) await new Promise(r => setTimeout(r, 500));
 
     // Extra settle time after WAF token issues
     await new Promise(r => setTimeout(r, 3000));
@@ -544,8 +540,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
 
-    // Wait up to 30s for results
-    const deadline = Date.now() + 30000;
+    // Wait up to 45s for results
+    const deadline = Date.now() + 45000;
     while (!apiData && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500));
     }
@@ -553,11 +549,10 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     await page.close();
     await browser.close();
 
-    if (!apiData) { console.log(`[search] apiData never arrived`); return null; }
+    if (!apiData) return null;
 
     // Parse the NAUPA SWS JSON response
     const properties = apiData.properties || (Array.isArray(apiData) ? apiData : []);
-    console.log(`[search] Got ${properties.length} properties from MissingMoney`);
     if (properties.length === 0) return null;
 
     // Parse amount — MissingMoney uses range text (e.g. "$25 to $50", "Over $100")
@@ -581,13 +576,8 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
-    // Filter by state, fall back to all if no state matches
-    const stateFiltered = properties.filter(p => (p.state || '').trim().toUpperCase() === state);
-    const resultSet = stateFiltered.length > 0 ? stateFiltered : properties;
-    console.log(`[search] ${properties.length} total, ${stateFiltered.length} in ${state}, using ${resultSet.length}`);
-
-    // Return page 1
-    const entities = resultSet.slice(0, 20).map(p => {
+    // Return page 1 exactly as MissingMoney shows it
+    const entities = properties.slice(0, 20).map(p => {
       const { num, amtLabel } = parseAmt(p);
       const owner = normalize(p.ownerName || '');
       const isMatch = owner === fullName || owner === lastOnly ||
@@ -606,7 +596,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     });
 
     // Sum only rows that match the visitor's name
-    const matchedProperties = resultSet.filter(p => {
+    const matchedProperties = properties.filter(p => {
       const owner = normalize(p.ownerName || '');
       return owner === fullName || owner === lastOnly ||
              owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
