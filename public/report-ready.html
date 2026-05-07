@@ -95,6 +95,7 @@ const firstName = params.get('name') || 'there';
 const lastName = params.get('lastName') || '';
 const email = params.get('email') || '';
 const userState = params.get('state') || '';
+const userCity = params.get('city') || '';
 
 // Scan steps shown during 15-second animation
 const SCAN_STEPS = [
@@ -135,7 +136,8 @@ function tryRender() {
     try {
       const r = await fetch('/search-missingmoney?firstName=' + encodeURIComponent(firstName) +
         '&lastName=' + encodeURIComponent(lastName) +
-        '&state=' + encodeURIComponent(userState));
+        '&state=' + encodeURIComponent(userState) +
+        '&city=' + encodeURIComponent(userCity));
       const d = await r.json();
       if (d.found || (i === 4)) {
         resultsData = d;
@@ -169,7 +171,8 @@ setTimeout(() => {
 // Drive progress bar from real server-sent events
 const sseUrl = '/search-progress?firstName=' + encodeURIComponent(firstName) +
   '&lastName=' + encodeURIComponent(lastName) +
-  '&state=' + encodeURIComponent(userState);
+  '&state=' + encodeURIComponent(userState) +
+  '&city=' + encodeURIComponent(userCity);
 
 const evtSource = new EventSource(sseUrl);
 const seenLabels = new Set();

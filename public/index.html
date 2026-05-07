@@ -106,7 +106,7 @@ select.step-input option{background:#0f172a;color:#fff}
 
   <!-- Step 1: First Name -->
   <div class="step active" id="step-0">
-    <div class="step-num">Step 1 of 4</div>
+    <div class="step-num">Step 1 of 5</div>
     <div class="step-label">What's your first name?</div>
     <input class="step-input" id="firstName" type="text" placeholder="First name" autocomplete="given-name" autofocus/>
     <button class="next-btn" onclick="nextStep()">Continue →</button>
@@ -115,7 +115,7 @@ select.step-input option{background:#0f172a;color:#fff}
 
   <!-- Step 2: Last Name -->
   <div class="step" id="step-1">
-    <div class="step-num">Step 2 of 4</div>
+    <div class="step-num">Step 2 of 5</div>
     <div class="step-label">And your last name?</div>
     <input class="step-input" id="lastName" type="text" placeholder="Last name" autocomplete="family-name"/>
     <button class="next-btn" onclick="nextStep()">Continue →</button>
@@ -124,7 +124,14 @@ select.step-input option{background:#0f172a;color:#fff}
 
   <!-- Step 3: Email -->
   <div class="step" id="step-2">
-    <div class="step-num">Step 3 of 4</div>
+    <div class="step-num">Step 3 of 5</div>
+    <div class="step-label">What city do you live in?</div>
+    <input class="step-input" id="city" type="text" placeholder="City" autocomplete="address-level2"/>
+    <button class="next-btn" onclick="nextStep()" style="margin-top:24px">Continue &rarr;</button>
+  </div>
+
+  <div class="step" id="step-3">
+    <div class="step-num">Step 4 of 5</div>
     <div class="step-label">Which state do you live in?</div>
     <select class="step-input" id="state">
       <option value="" disabled selected>Select your state</option>
@@ -149,8 +156,8 @@ select.step-input option{background:#0f172a;color:#fff}
     <button class="next-btn" onclick="nextStep()" style="margin-top:24px">Continue →</button>
   </div>
 
-  <div class="step" id="step-3">
-    <div class="step-num">Step 4 of 4</div>
+  <div class="step" id="step-4">
+    <div class="step-num">Step 5 of 5</div>
     <div class="step-label">Where should we send your results?</div>
     <input class="step-input" id="email" type="email" placeholder="your@email.com" autocomplete="email"/>
     <button class="next-btn full" id="submitBtn" onclick="submitForm()">Find My Money →</button>
@@ -202,8 +209,8 @@ select.step-input option{background:#0f172a;color:#fff}
 
 <script>
 let current = 0;
-const TOTAL = 4;
-const inputs = ['firstName','lastName','state','email'];
+const TOTAL = 5;
+const inputs = ['firstName','lastName','city','state','email'];
 
 function updateProgress() {
   const pct = (current / TOTAL) * 100;
@@ -228,17 +235,17 @@ function nextStep() {
     }, 50);
     updateProgress();
   }
-  // Fire prefetch as soon as state is selected (step 2 -> step 3)
-  // gives ~15-30s head start before user finishes entering email
-  if (current === 3) {
+  // Fire prefetch as soon as state is selected (step 3 -> step 4)
+  if (current === 4) {
     const fn = document.getElementById('firstName').value.trim();
     const ln = document.getElementById('lastName').value.trim();
+    const ct = document.getElementById('city').value.trim();
     const st = document.getElementById('state').value.trim();
     if (fn && ln && st) {
       fetch('/prefetch-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName: fn, lastName: ln, state: st })
+        body: JSON.stringify({ firstName: fn, lastName: ln, city: ct, state: st })
       }).catch(() => {});
     }
   }
@@ -266,8 +273,8 @@ document.addEventListener('keydown', e => {
 async function submitForm() {
   const firstName = document.getElementById('firstName').value.trim();
   const lastName  = document.getElementById('lastName').value.trim();
+  const city      = document.getElementById('city').value.trim();
   const state     = document.getElementById('state').value.trim();
-  const city      = '';
   const email     = document.getElementById('email').value.trim();
 
   if (!email) { document.getElementById('email').focus(); return; }
@@ -295,7 +302,7 @@ async function submitForm() {
     });
   } catch(e) {}
 
-  window.location.href = '/report-ready.html?name=' + encodeURIComponent(firstName) + '&lastName=' + encodeURIComponent(lastName) + '&email=' + encodeURIComponent(email) + '&state=' + encodeURIComponent(state);
+  window.location.href = '/report-ready.html?name=' + encodeURIComponent(firstName) + '&lastName=' + encodeURIComponent(lastName) + '&email=' + encodeURIComponent(email) + '&state=' + encodeURIComponent(state) + '&city=' + encodeURIComponent(city);
 }
 
 updateProgress();

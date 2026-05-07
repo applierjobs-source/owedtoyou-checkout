@@ -483,10 +483,11 @@ const progressEmitters = new Map();
 
 // GET /search-progress?firstName=&lastName=&state= — SSE stream of search milestones
 app.get('/search-progress', (req, res) => {
-  const { firstName, lastName, state: userState } = req.query;
+  const { firstName, lastName, state: userState, city: userCity } = req.query;
   if (!firstName || !lastName) { res.end(); return; }
   const state = (userState || 'TX').trim().toUpperCase();
-  const key = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+  const city = (userCity || '').trim().toUpperCase();
+  const key = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}|${city.toLowerCase()}`;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -522,14 +523,15 @@ app.get('/search-progress', (req, res) => {
 });
 
 app.get("/search-missingmoney", async (req, res) => {
-  const { firstName, lastName, state: userState } = req.query;
+  const { firstName, lastName, state: userState, city: userCity } = req.query;
   if (!firstName || !lastName) return res.json({ found: false, entities: [], total: 0 });
 
   const state = (userState || 'TX').trim().toUpperCase();
+  const city = (userCity || '').trim().toUpperCase();
   const config = STATE_SEARCH_CONFIG[state] || STATE_SEARCH_CONFIG['TX'];
 
   // Serve cached result if fresh
-  const cacheKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+  const cacheKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}|${city.toLowerCase()}`;
 
   // Check in-memory cache first (fastest)
   const memCached = searchCache.get(cacheKey);
@@ -548,7 +550,7 @@ app.get("/search-missingmoney", async (req, res) => {
 
   // Retry loop — keep trying until we get results, up to 5 attempts
   for (let attempt = 1; attempt <= 5; attempt++) {
-    const result = await attemptMissingMoneySearch(firstName, lastName, state, attempt);
+    const result = await attemptMissingMoneySearch(firstName, lastName, state, city, attempt);
     if (result) {
       searchCache.set(cacheKey, { result, ts: Date.now() });
       redisCacheSet(cacheKey, result).catch(() => {});
@@ -568,8 +570,8 @@ function emitProgress(key, pct, label) {
   emitters.forEach(emit => { try { emit(pct, label); } catch {} });
 }
 
-async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
-  const progressKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}`;
+async function attemptMissingMoneySearch(firstName, lastName, state, city, attempt) {
+  const progressKey = `mm:${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${state}|${(city||'').toLowerCase()}`;
 
   const ZR_KEY = process.env.ZENROWS_API_KEY || '637d20b8c4d518bb5ccd2138db3709422b776b43';
   // proxy_country=us routes through US residential IPs — required to bypass MissingMoney CloudFront block
@@ -591,6 +593,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
         const orig = route.request().postData();
         const parsed = JSON.parse(orig);
         parsed.state = state;
+        if (city) parsed.city = city;
         await route.continue({ postData: JSON.stringify(parsed) });
       } catch { await route.continue(); }
     });
@@ -686,8 +689,14 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
-    // Return first 10 only — faster render
-    const entities = properties.slice(0, 10).map(p => {
+    // Filter by city if provided, fall back to all if no matches
+    const cityFiltered = city
+      ? properties.filter(p => (p.city || '').toUpperCase().includes(city))
+      : properties;
+    const resultSet = cityFiltered.length > 0 ? cityFiltered : properties;
+
+    // Return first 10 only
+    const entities = resultSet.slice(0, 10).map(p => {
       const { num, amtLabel } = parseAmt(p);
       const owner = normalize(p.ownerName || '');
       const isMatch = owner === fullName || owner === lastOnly ||
@@ -705,16 +714,15 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
       };
     });
 
-    // Sum only rows that match the visitor's name
-    const matchedProperties = properties.filter(p => {
+    // Sum all matching records in filtered set
+    const matchedProperties = resultSet.filter(p => {
       const owner = normalize(p.ownerName || '');
       return owner === fullName || owner === lastOnly ||
              owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
     });
-    // Sum ALL matching records (not just displayed 10) for a complete total
     const matchedTotal = matchedProperties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    const total = properties.reduce((s, p) => s + (parseAmt(p).num), 0);
-    return { found: true, entities, total, matchedTotal, count: properties.length };
+    const total = resultSet.reduce((s, p) => s + (parseAmt(p).num), 0);
+    return { found: true, entities, total, matchedTotal, count: resultSet.length };
 
   } catch (err) {
     console.error(`[search] attempt error: ${err.message.slice(0, 80)}`);
@@ -859,11 +867,11 @@ app.get("/search-unclaimed", async (req, res) => {
 // report-ready.html calls /search-missingmoney
 // ---------------------------------------------------------------------------
 app.post('/prefetch-search', (req, res) => {
-  const { firstName, lastName, state } = req.body;
+  const { firstName, lastName, state, city } = req.body;
   if (!firstName || !lastName) return res.json({ ok: false });
   res.json({ ok: true }); // respond immediately
   // Fire search in background — result lands in cache
-  const url = `http://localhost:${process.env.PORT || 3000}/search-missingmoney?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&state=${encodeURIComponent(state || 'TX')}`;
+  const url = `http://localhost:${process.env.PORT || 3000}/search-missingmoney?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&state=${encodeURIComponent(state || 'TX')}&city=${encodeURIComponent(city || '')}`;
   require('http').get(url).on('error', () => {});
 });
 
