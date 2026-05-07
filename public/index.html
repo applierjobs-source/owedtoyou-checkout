@@ -228,6 +228,20 @@ function nextStep() {
     }, 50);
     updateProgress();
   }
+  // Fire prefetch as soon as state is selected (step 2 -> step 3)
+  // gives ~15-30s head start before user finishes entering email
+  if (current === 3) {
+    const fn = document.getElementById('firstName').value.trim();
+    const ln = document.getElementById('lastName').value.trim();
+    const st = document.getElementById('state').value.trim();
+    if (fn && ln && st) {
+      fetch('/prefetch-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: fn, lastName: ln, state: st })
+      }).catch(() => {});
+    }
+  }
 }
 
 function prevStep() {

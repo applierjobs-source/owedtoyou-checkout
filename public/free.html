@@ -228,6 +228,19 @@ function nextStep() {
     }, 50);
     updateProgress();
   }
+  // Prefetch as soon as state selected
+  if (current === 3) {
+    const fn = document.getElementById('firstName').value.trim();
+    const ln = document.getElementById('lastName').value.trim();
+    const st = document.getElementById('state').value.trim();
+    if (fn && ln && st) {
+      fetch('/prefetch-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: fn, lastName: ln, state: st })
+      }).catch(() => {});
+    }
+  }
 }
 
 function prevStep() {
