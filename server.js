@@ -539,29 +539,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Fill form and submit
     await typeInto('#lastNameTop, input[name*="lastName"]', lastName.trim());
     await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
-    // MissingMoney state dropdown uses full name (e.g. "Texas") not abbreviation ("TX")
-    const STATE_NAMES = {
-      AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
-      CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
-      HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',
-      KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',
-      MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',
-      MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
-      NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',
-      OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
-      SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',
-      VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'District of Columbia'
-    };
-    const stateFullName = STATE_NAMES[state] || state;
-    try {
-      await page.selectOption('select[id*="state"], #stateTop', state);
-    } catch {
-      try {
-        await page.selectOption('select[id*="state"], #stateTop', stateFullName);
-      } catch(e) {
-        console.log(`[search] State select failed for ${state}:`, e.message);
-      }
-    }
+    try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all states */ }
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
 
