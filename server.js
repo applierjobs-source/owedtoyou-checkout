@@ -445,7 +445,9 @@ const STATE_SEARCH_CONFIG = {
 
 // In-memory cache: key = "first|last|state", value = { result, ts }
 const searchCache = new Map();
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+// Cache TTL reduced to 1h to ensure state-filtered results don't linger
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_TTL = CACHE_TTL_MS;
 
 app.get("/search-missingmoney", async (req, res) => {
   const { firstName, lastName, state: userState } = req.query;
@@ -537,7 +539,28 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     // Fill form and submit
     await typeInto('#lastNameTop, input[name*="lastName"]', lastName.trim());
     await typeInto('#firstNameTop, input[name*="firstName"]', firstName.trim());
-    try { await page.selectOption('select[id*="state"], #stateTop', state); } catch { /* search all states */ }
+    // MissingMoney state dropdown uses full name (e.g. "Texas") not abbreviation ("TX")
+    const STATE_NAMES = {
+      AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
+      CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
+      HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',
+      KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',
+      MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',
+      MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+      NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',
+      OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+      SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',
+      VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'District of Columbia'
+    };
+    const stateFullName = STATE_NAMES[state] || state;
+    try {
+      // Try value (abbreviation) first, then label (full name)
+      await page.selectOption('select[id*="state"], #stateTop', { value: state }).catch(() =>
+        page.selectOption('select[id*="state"], #stateTop', { label: stateFullName })
+      );
+    } catch(e) {
+      console.log(`[search] State select failed for ${state}, searching all states:`, e.message);
+    }
     await new Promise(r => setTimeout(r, 1000));
     await page.keyboard.press('Enter');
 
@@ -577,8 +600,13 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
+    // Filter results to the requested state first, fall back to all if none match
+    const stateFiltered = properties.filter(p => (p.state || '').trim().toUpperCase() === state);
+    const resultSet = stateFiltered.length > 0 ? stateFiltered : properties;
+    if (stateFiltered.length === 0) console.log(`[search] No state-specific results for ${state}, showing all`);
+
     // Return page 1 exactly as MissingMoney shows it
-    const entities = properties.slice(0, 20).map(p => {
+    const entities = resultSet.slice(0, 20).map(p => {
       const { num, amtLabel } = parseAmt(p);
       const owner = normalize(p.ownerName || '');
       const isMatch = owner === fullName || owner === lastOnly ||
@@ -597,7 +625,7 @@ async function attemptMissingMoneySearch(firstName, lastName, state, attempt) {
     });
 
     // Sum only rows that match the visitor's name
-    const matchedProperties = properties.filter(p => {
+    const matchedProperties = resultSet.filter(p => {
       const owner = normalize(p.ownerName || '');
       return owner === fullName || owner === lastOnly ||
              owner.startsWith(lastOnly + ' ') || owner.endsWith(' ' + lastOnly);
