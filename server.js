@@ -605,26 +605,18 @@ async function attemptMissingMoneySearch(firstName, lastName, state, city, attem
     const context = browser.contexts()[0] || await browser.newContext();
     const page = await context.newPage();
 
-    // Intercept the POST to /SWS/properties and inject the correct state
+    // Capture ANY /SWS/properties response (GET or POST) — filter by state/city on our end
     let apiData = null;
-    await page.route('**/SWS/properties', async route => {
-      try {
-        if (route.request().method() !== 'POST') { await route.continue(); return; }
-        const orig = route.request().postData();
-        const parsed = JSON.parse(orig);
-        parsed.state = state;
-        if (city) parsed.city = city;
-        await route.continue({ postData: JSON.stringify(parsed) });
-      } catch { await route.continue(); }
-    });
-
-    // Only capture the POST response (not the initial GET)
     page.on('response', async (resp) => {
       try {
-        if (resp.url().includes('/SWS/properties') && resp.request().method() === 'POST' && !apiData) {
-          const body = await resp.json().catch(() => null);
-          if (body && (body.properties || Array.isArray(body))) {
-            apiData = body;
+        const url = resp.url();
+        if (url.includes('/SWS/') && url.includes('properties') && !apiData) {
+          const ct = resp.headers()['content-type'] || '';
+          if (ct.includes('json')) {
+            const body = await resp.json().catch(() => null);
+            if (body && (body.properties || Array.isArray(body))) {
+              apiData = body;
+            }
           }
         }
       } catch { /* */ }
@@ -657,8 +649,9 @@ async function attemptMissingMoneySearch(firstName, lastName, state, city, attem
     await page.goto('https://missingmoney.com', { timeout: 90000, waitUntil: 'domcontentloaded' });
     emitProgress(progressKey, 40, 'Database loaded, verifying session...');
 
-    // Wait for WAF token — no timeout, wait as long as it takes
+    // Wait for WAF token then extra 2s for Cloudflare secondary check to clear
     while (!wafToken) await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 2000));
     emitProgress(progressKey, 60, 'Session verified, searching records...');
 
 
@@ -711,11 +704,14 @@ async function attemptMissingMoneySearch(firstName, lastName, state, city, attem
     const fullName = normalize(`${firstName} ${lastName}`);
     const lastOnly = normalize(lastName);
 
-    // Filter by city if provided, fall back to all if no matches
+    // Filter by state first
+    const stateFiltered = properties.filter(p => (p.state || '').trim().toUpperCase() === state);
+    const stateSet = stateFiltered.length > 0 ? stateFiltered : properties;
+    // Then filter by city if provided
     const cityFiltered = city
-      ? properties.filter(p => (p.city || '').toUpperCase().includes(city))
-      : properties;
-    const resultSet = cityFiltered.length > 0 ? cityFiltered : properties;
+      ? stateSet.filter(p => (p.city || '').toUpperCase().includes(city))
+      : stateSet;
+    const resultSet = cityFiltered.length > 0 ? cityFiltered : stateSet;
 
     // Return first 10 only
     const entities = resultSet.slice(0, 10).map(p => {
